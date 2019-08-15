@@ -93,12 +93,7 @@ impl<'s> System<'s> for PlayerSystem {
                     .map(|(target_entity, _)| target_entity);
                 if let Some(target_entity) = target_entity {
                     queued_attack_data
-                        .insert(
-                            player_entity,
-                            QueuedAttack {
-                                target_entity: target_entity,
-                            },
-                        )
+                        .insert(player_entity, QueuedAttack { target_entity })
                         .unwrap();
                 }
             }
