@@ -1,12 +1,14 @@
+mod attack_system;
 mod components;
-mod player_move_system;
+mod player_system;
 mod render_system;
 
+use attack_system::AttackSystem;
 use components::*;
-use player_move_system::{Direction, PlayerMoveSystem};
+use player_system::{PlayerAction, PlayerSystem};
 use render_system::RenderSystem;
 use sdl2::event::Event;
-use sdl2::keyboard::Scancode;
+use sdl2::keyboard::{Mod, Scancode};
 use specs::{Builder, RunNow, World, WorldExt};
 use std::time::{Duration, Instant};
 
@@ -18,12 +20,17 @@ fn main() {
     world.register::<PlayerComponent>();
     world.register::<PositionComponent>();
     world.register::<SpriteComponent>();
-    let mut player_move_system = PlayerMoveSystem::new();
+    world.register::<HealthComponent>();
+    world.register::<QueuedAttack>();
+    let mut player_system = PlayerSystem::new();
+    let mut attack_system = AttackSystem::new();
     let mut render_system = RenderSystem::new(&sdl_context);
 
     world
         .create_entity()
-        .with(PlayerComponent {})
+        .with(PlayerComponent {
+            facing_direction: Direction::Right,
+        })
         .with(PositionComponent { x: 0, y: 0 })
         .with(SpriteComponent { id: "player" })
         .build();
@@ -34,20 +41,41 @@ fn main() {
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. } => break 'game_loop,
-                Event::KeyDown { scancode, .. } => match scancode {
+                Event::KeyDown {
+                    scancode, keymod, ..
+                } => match scancode {
                     #[cfg(debug_assertions)]
                     Some(Scancode::Escape) => break 'game_loop,
                     Some(Scancode::W) => {
-                        player_move_system.direction_to_move = Some(Direction::Up);
+                        if keymod.contains(Mod::LSHIFTMOD) {
+                            player_system.action = PlayerAction::TurnToFace(Direction::Up);
+                        } else {
+                            player_system.action = PlayerAction::Move(Direction::Up);
+                        }
                     }
                     Some(Scancode::A) => {
-                        player_move_system.direction_to_move = Some(Direction::Left);
+                        if keymod.contains(Mod::LSHIFTMOD) {
+                            player_system.action = PlayerAction::TurnToFace(Direction::Left);
+                        } else {
+                            player_system.action = PlayerAction::Move(Direction::Left);
+                        }
                     }
                     Some(Scancode::S) => {
-                        player_move_system.direction_to_move = Some(Direction::Down);
+                        if keymod.contains(Mod::LSHIFTMOD) {
+                            player_system.action = PlayerAction::TurnToFace(Direction::Down);
+                        } else {
+                            player_system.action = PlayerAction::Move(Direction::Down);
+                        }
                     }
                     Some(Scancode::D) => {
-                        player_move_system.direction_to_move = Some(Direction::Right);
+                        if keymod.contains(Mod::LSHIFTMOD) {
+                            player_system.action = PlayerAction::TurnToFace(Direction::Right);
+                        } else {
+                            player_system.action = PlayerAction::Move(Direction::Right);
+                        }
+                    }
+                    Some(Scancode::Q) => {
+                        player_system.action = PlayerAction::Attack;
                     }
                     _ => {}
                 },
@@ -59,7 +87,9 @@ fn main() {
         time_accumulator += current_time - previous_time;
         previous_time = current_time;
         while time_accumulator >= Duration::from_nanos(16700000) {
-            player_move_system.run_now(&world);
+            player_system.run_now(&world);
+            attack_system.run_now(&world);
+            world.maintain();
             time_accumulator -= Duration::from_nanos(16700000);
         }
         render_system.run_now(&world);
