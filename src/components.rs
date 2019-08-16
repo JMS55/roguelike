@@ -4,15 +4,14 @@ use specs_derive::Component;
 
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 #[storage(BTreeStorage)]
-pub struct PlayerComponent {
-    pub facing_direction: Direction,
-}
+pub struct PlayerComponent {}
 
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 #[storage(BTreeStorage)]
 pub struct PositionComponent {
     pub x: i32,
     pub y: i32,
+    pub facing_direction: Direction,
 }
 
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
@@ -32,6 +31,13 @@ pub struct HealthComponent {
 #[storage(BTreeStorage)]
 pub struct QueuedAttack {
     pub target_entity: Entity,
+}
+
+#[derive(Component, Debug, Hash, PartialEq, Eq, Clone)]
+#[storage(BTreeStorage)]
+pub struct QueuedMovement {
+    pub goal_x: i32,
+    pub goal_y: i32,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]

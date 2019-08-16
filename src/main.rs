@@ -22,16 +22,19 @@ fn main() {
     world.register::<SpriteComponent>();
     world.register::<HealthComponent>();
     world.register::<QueuedAttack>();
+    world.register::<QueuedMovement>();
     let mut player_system = PlayerSystem::new();
     let mut attack_system = AttackSystem::new();
     let mut render_system = RenderSystem::new(&sdl_context);
 
     world
         .create_entity()
-        .with(PlayerComponent {
+        .with(PlayerComponent {})
+        .with(PositionComponent {
+            x: 0,
+            y: 0,
             facing_direction: Direction::Right,
         })
-        .with(PositionComponent { x: 0, y: 0 })
         .with(SpriteComponent { id: "player" })
         .build();
 

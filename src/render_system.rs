@@ -37,20 +37,18 @@ impl<'s> System<'s> for RenderSystem {
         let player_position = (&player_data, &position_data).join().next().unwrap().1;
         self.canvas.clear();
         for (entity_position, entity_sprite) in (&position_data, &sprite_data).join() {
-            let adjusted_entity_position = PositionComponent {
-                x: entity_position.x - player_position.x + 7,
-                y: player_position.y - entity_position.y + 7,
-            };
-            if (0..15).contains(&adjusted_entity_position.x)
-                && (0..15).contains(&adjusted_entity_position.y)
+            let adjusted_entity_position_x = entity_position.x - player_position.x + 7;
+            let adjusted_entity_position_y = player_position.y - entity_position.y + 7;
+            if (0..15).contains(&adjusted_entity_position_x)
+                && (0..15).contains(&adjusted_entity_position_y)
             {
                 let texture_creator = self.canvas.texture_creator();
                 let texture = texture_creator
                     .load_texture(format!("assets/{}.png", entity_sprite.id))
                     .unwrap();
                 let dest_rect = Rect::new(
-                    adjusted_entity_position.x * 8 * 4,
-                    adjusted_entity_position.y * 8 * 4,
+                    adjusted_entity_position_x * 8 * 4,
+                    adjusted_entity_position_y * 8 * 4,
                     8 * 4,
                     8 * 4,
                 );
