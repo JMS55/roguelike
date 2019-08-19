@@ -1,4 +1,4 @@
-use crate::components::{Direction, PositionComponent, QueuedMovement};
+use crate::components::{Direction, MovementType, PositionComponent, QueuedMovement};
 use specs::{Entities, Join, LazyUpdate, Read, ReadStorage, System, WriteStorage};
 use std::cmp::{Ord, Ordering};
 use std::collections::{BinaryHeap, HashMap, HashSet};
@@ -24,6 +24,8 @@ impl<'s> System<'s> for MovementSystem {
         (queued_movement_data, mut position_data, entities, lazy_update): Self::SystemData,
     ) {
         for (moving_entity, movement_info) in (&entities, &queued_movement_data).join() {
+            let mut new_x = movement_info.goal_x;
+            let mut new_y = movement_info.goal_y;
             let obstacles = (&position_data)
                 .join()
                 .map(|position| (position.x, position.y))
@@ -41,9 +43,18 @@ impl<'s> System<'s> for MovementSystem {
             cost_so_far.insert((moving_entity_position.x, moving_entity_position.y), 0);
 
             while let Some(visiting) = frontier.pop() {
-                if visiting.x == movement_info.goal_x && visiting.y == movement_info.goal_y {
+                if movement_info.movement_type == MovementType::StandOn
+                    && visiting.x == movement_info.goal_x
+                    && visiting.y == movement_info.goal_y
+                {
                     break;
-                }
+                } else if movement_info.movement_type == MovementType::StandNextTo
+                    && visiting.is_next_to((new_x, new_y))
+                {
+                    new_x = visiting.x;
+                    new_y = visiting.y;
+                    break;
+                };
                 for (neighbor_x, neighbor_y) in visiting.get_neighbors(&obstacles) {
                     let new_cost = cost_so_far[&(visiting.x, visiting.y)] + 1;
                     if !cost_so_far.contains_key(&(neighbor_x, neighbor_y))
@@ -64,8 +75,6 @@ impl<'s> System<'s> for MovementSystem {
             }
 
             let mut entity_moved = true;
-            let mut new_x = movement_info.goal_x;
-            let mut new_y = movement_info.goal_y;
             loop {
                 if let Some((previous_x, previous_y)) = came_from.get(&(new_x, new_y)) {
                     if previous_x == &moving_entity_position.x
@@ -118,6 +127,16 @@ impl FrontierNode {
             }
         }
         neighbors
+    }
+
+    fn is_next_to(&self, (other_x, other_y): (i32, i32)) -> bool {
+        match (self.x - other_x, self.y - other_y) {
+            (1, 0) => true,
+            (-1, 0) => true,
+            (0, 1) => true,
+            (0, -1) => true,
+            _ => false,
+        }
     }
 }
 

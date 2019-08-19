@@ -1,7 +1,9 @@
 use crate::components::{
-    Direction, HealthComponent, PlayerComponent, PositionComponent, QueuedAttack, QueuedMovement,
+    Direction, HealthComponent, IsPlayerTurn, MovementType, PlayerComponent, PositionComponent,
+    QueuedAttack, QueuedMovement,
 };
-use specs::{Entities, Join, ReadStorage, System, WriteStorage};
+use specs::{Entities, Join, ReadStorage, System, Write, WriteStorage};
+use std::collections::HashSet;
 
 pub struct PlayerSystem {
     pub action: PlayerAction,
@@ -17,6 +19,7 @@ impl PlayerSystem {
 
 impl<'s> System<'s> for PlayerSystem {
     type SystemData = (
+        Write<'s, IsPlayerTurn>,
         WriteStorage<'s, PlayerComponent>,
         WriteStorage<'s, PositionComponent>,
         ReadStorage<'s, HealthComponent>,
@@ -28,6 +31,7 @@ impl<'s> System<'s> for PlayerSystem {
     fn run(
         &mut self,
         (
+            mut is_player_turn,
             mut player_data,
             mut position_data,
             health_data,
@@ -37,7 +41,14 @@ impl<'s> System<'s> for PlayerSystem {
         ): Self::SystemData,
     ) {
         match self.action {
+            PlayerAction::Pass => {
+                *is_player_turn = IsPlayerTurn(false);
+            }
             PlayerAction::Move(direction_to_move) => {
+                let obstacles = (&position_data)
+                    .join()
+                    .map(|position| (position.x, position.y))
+                    .collect::<HashSet<(i32, i32)>>();
                 let (player_entity, _, player_position) =
                     (&entities, &mut player_data, &mut position_data)
                         .join()
@@ -51,9 +62,19 @@ impl<'s> System<'s> for PlayerSystem {
                     Direction::Left => goal_x -= 1,
                     Direction::Right => goal_x += 1,
                 };
-                queued_movement_data
-                    .insert(player_entity, QueuedMovement { goal_x, goal_y })
-                    .unwrap();
+                if !obstacles.contains(&(goal_x, goal_y)) {
+                    queued_movement_data
+                        .insert(
+                            player_entity,
+                            QueuedMovement {
+                                goal_x,
+                                goal_y,
+                                movement_type: MovementType::StandOn,
+                            },
+                        )
+                        .unwrap();
+                    *is_player_turn = IsPlayerTurn(false);
+                }
             }
             PlayerAction::TurnToFace(direction_to_face) => {
                 let player_position = (&player_data, &mut position_data).join().next().unwrap().1;
@@ -81,6 +102,7 @@ impl<'s> System<'s> for PlayerSystem {
                     queued_attack_data
                         .insert(player_entity, QueuedAttack { target_entity })
                         .unwrap();
+                    *is_player_turn = IsPlayerTurn(false);
                 }
             }
             PlayerAction::None => {}
@@ -93,6 +115,7 @@ impl<'s> System<'s> for PlayerSystem {
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
 pub enum PlayerAction {
     None,
+    Pass,
     Move(Direction),
     TurnToFace(Direction),
     Attack,

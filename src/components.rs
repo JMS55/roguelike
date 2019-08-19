@@ -29,6 +29,10 @@ pub struct HealthComponent {
 
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 #[storage(BTreeStorage)]
+pub struct AIAttackPlayerComponent {}
+
+#[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
+#[storage(BTreeStorage)]
 pub struct QueuedAttack {
     pub target_entity: Entity,
 }
@@ -38,7 +42,17 @@ pub struct QueuedAttack {
 pub struct QueuedMovement {
     pub goal_x: i32,
     pub goal_y: i32,
+    pub movement_type: MovementType,
 }
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+pub enum MovementType {
+    StandOn,
+    StandNextTo,
+}
+
+#[derive(Default, Debug, Hash, PartialEq, Eq, Copy, Clone)]
+pub struct IsPlayerTurn(pub bool);
 
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
 pub enum Direction {
