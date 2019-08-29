@@ -48,13 +48,14 @@ impl<'s> System<'s> for MovementSystem {
                     && visiting.y == movement_info.goal_y
                 {
                     break;
-                } else if movement_info.movement_type == MovementType::StandNextTo
+                }
+                if movement_info.movement_type == MovementType::StandNextTo
                     && visiting.is_next_to((new_x, new_y))
                 {
                     new_x = visiting.x;
                     new_y = visiting.y;
                     break;
-                };
+                }
                 for (neighbor_x, neighbor_y) in visiting.get_neighbors(&obstacles) {
                     let new_cost = cost_so_far[&(visiting.x, visiting.y)] + 1;
                     if !cost_so_far.contains_key(&(neighbor_x, neighbor_y))

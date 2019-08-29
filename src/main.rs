@@ -1,6 +1,7 @@
 mod ai_attack_player_system;
 mod attack_system;
 mod components;
+mod generate_dungeon_system;
 mod movement_system;
 mod player_system;
 mod render_system;
@@ -8,6 +9,7 @@ mod render_system;
 use ai_attack_player_system::AIAttackPlayerSystem;
 use attack_system::AttackSystem;
 use components::*;
+use generate_dungeon_system::GenerateDungeonSystem;
 use movement_system::MovementSystem;
 use player_system::{PlayerAction, PlayerSystem};
 use render_system::RenderSystem;
@@ -29,86 +31,29 @@ fn main() {
     world.register::<AIAttackPlayerComponent>();
     world.register::<QueuedAttack>();
     world.register::<QueuedMovement>();
+    let mut generate_dungeon_system = GenerateDungeonSystem::new();
     let mut player_system = PlayerSystem::new();
     let mut ai_attack_player_system = AIAttackPlayerSystem::new();
     let mut attack_system = AttackSystem::new();
     let mut movement_system = MovementSystem::new();
     let mut render_system = RenderSystem::new(&sdl_context);
 
-    {
-        world
-            .create_entity()
-            .with(PlayerComponent {})
-            .with(PositionComponent {
-                x: 0,
-                y: 0,
-                facing_direction: Direction::Right,
-            })
-            .with(HealthComponent {
-                current_health: 10,
-                max_health: 10,
-            })
-            .with(SpriteComponent { id: "player" })
-            .build();
-        world
-            .create_entity()
-            .with(PositionComponent {
-                x: -2,
-                y: -3,
-                facing_direction: Direction::Right,
-            })
-            .with(HealthComponent {
-                current_health: 10,
-                max_health: 10,
-            })
-            .with(AIAttackPlayerComponent {})
-            .with(SpriteComponent { id: "enemy" })
-            .build();
-        for x in -5..5 {
-            world
-                .create_entity()
-                .with(PositionComponent {
-                    x,
-                    y: 5,
-                    facing_direction: Direction::Right,
-                })
-                .with(SpriteComponent { id: "wall" })
-                .build();
-        }
-        for x in -5..5 {
-            world
-                .create_entity()
-                .with(PositionComponent {
-                    x,
-                    y: -5,
-                    facing_direction: Direction::Right,
-                })
-                .with(SpriteComponent { id: "wall" })
-                .build();
-        }
-        for y in -5..5 {
-            world
-                .create_entity()
-                .with(PositionComponent {
-                    x: -5,
-                    y,
-                    facing_direction: Direction::Right,
-                })
-                .with(SpriteComponent { id: "wall" })
-                .build();
-        }
-        for y in -5..6 {
-            world
-                .create_entity()
-                .with(PositionComponent {
-                    x: 5,
-                    y,
-                    facing_direction: Direction::Right,
-                })
-                .with(SpriteComponent { id: "wall" })
-                .build();
-        }
-    }
+    world
+        .create_entity()
+        .with(PlayerComponent {})
+        .with(PositionComponent {
+            x: 0,
+            y: 0,
+            facing_direction: Direction::Right,
+        })
+        .with(HealthComponent {
+            current_health: 10,
+            max_health: 10,
+        })
+        .with(SpriteComponent { id: "player" })
+        .build();
+    generate_dungeon_system.run_now(&world);
+    world.maintain();
 
     let mut time_accumulator = Duration::from_secs(0);
     let mut previous_time = Instant::now();
@@ -169,7 +114,7 @@ fn main() {
                 player_system.run_now(&world);
             } else {
                 ai_attack_player_system.run_now(&world);
-                world.insert::<IsPlayerTurn>(IsPlayerTurn(true));
+                world.insert(IsPlayerTurn(true));
             }
             attack_system.run_now(&world);
             world.maintain();
