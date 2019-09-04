@@ -150,7 +150,7 @@ fn create_wall(x: i32, y: i32, lazy_update: &Read<LazyUpdate>) {
                 y,
                 facing_direction: Direction::Right,
             })
-            .with(SpriteComponent { id: "wall" })
+            .with(SpriteComponent { id: "blue" })
             .build();
     });
 }

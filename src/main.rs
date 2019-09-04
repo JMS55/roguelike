@@ -1,6 +1,7 @@
 mod ai_attack_player_system;
 mod attack_system;
 mod components;
+mod drain_crystals_system;
 mod generate_dungeon_system;
 mod movement_system;
 mod player_system;
@@ -9,6 +10,7 @@ mod render_system;
 use ai_attack_player_system::AIAttackPlayerSystem;
 use attack_system::AttackSystem;
 use components::*;
+use drain_crystals_system::DrainCrystalsSystem;
 use generate_dungeon_system::GenerateDungeonSystem;
 use movement_system::MovementSystem;
 use player_system::{PlayerAction, PlayerSystem};
@@ -36,11 +38,12 @@ fn main() {
     let mut ai_attack_player_system = AIAttackPlayerSystem::new();
     let mut attack_system = AttackSystem::new();
     let mut movement_system = MovementSystem::new();
+    let mut drain_crystals_system = DrainCrystalsSystem::new();
     let mut render_system = RenderSystem::new(&sdl_context);
 
     world
         .create_entity()
-        .with(PlayerComponent {})
+        .with(PlayerComponent::new(10000))
         .with(PositionComponent {
             x: 0,
             y: 0,
@@ -50,7 +53,7 @@ fn main() {
             current_health: 10,
             max_health: 10,
         })
-        .with(SpriteComponent { id: "player" })
+        .with(SpriteComponent { id: "red" })
         .build();
     generate_dungeon_system.run_now(&world);
     world.maintain();
@@ -120,6 +123,9 @@ fn main() {
             world.maintain();
             movement_system.run_now(&world);
             world.maintain();
+            if world.fetch::<IsPlayerTurn>().0 {
+                drain_crystals_system.run_now(&world);
+            }
             time_accumulator -= Duration::from_nanos(16700000);
         }
         render_system.run_now(&world);

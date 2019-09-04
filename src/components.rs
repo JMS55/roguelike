@@ -4,7 +4,19 @@ use specs_derive::Component;
 
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 #[storage(BTreeStorage)]
-pub struct PlayerComponent {}
+pub struct PlayerComponent {
+    pub crystals: u32,
+    pub turns_taken: u32,
+}
+
+impl PlayerComponent {
+    pub fn new(crystals: u32) -> Self {
+        Self {
+            crystals,
+            turns_taken: 0,
+        }
+    }
+}
 
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 #[storage(BTreeStorage)]

@@ -43,13 +43,15 @@ impl<'s> System<'s> for PlayerSystem {
         match self.action {
             PlayerAction::Pass => {
                 *is_player_turn = IsPlayerTurn(false);
+                let player = (&mut player_data).join().next().unwrap();
+                player.turns_taken += 1;
             }
             PlayerAction::Move(direction_to_move) => {
                 let obstacles = (&position_data)
                     .join()
                     .map(|position| (position.x, position.y))
                     .collect::<HashSet<(i32, i32)>>();
-                let (player_entity, _, player_position) =
+                let (player_entity, player, player_position) =
                     (&entities, &mut player_data, &mut position_data)
                         .join()
                         .next()
@@ -74,6 +76,7 @@ impl<'s> System<'s> for PlayerSystem {
                         )
                         .unwrap();
                     *is_player_turn = IsPlayerTurn(false);
+                    player.turns_taken += 1;
                 }
             }
             PlayerAction::TurnToFace(direction_to_face) => {
@@ -81,7 +84,7 @@ impl<'s> System<'s> for PlayerSystem {
                 player_position.facing_direction = direction_to_face;
             }
             PlayerAction::Attack => {
-                let (player_entity, _, player_position) =
+                let (player_entity, player, player_position) =
                     (&entities, &mut player_data, &mut position_data)
                         .join()
                         .next()
@@ -103,6 +106,7 @@ impl<'s> System<'s> for PlayerSystem {
                         .insert(player_entity, QueuedAttack { target_entity })
                         .unwrap();
                     *is_player_turn = IsPlayerTurn(false);
+                    player.turns_taken += 1;
                 }
             }
             PlayerAction::None => {}
