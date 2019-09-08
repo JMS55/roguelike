@@ -110,13 +110,10 @@ impl<'s> System<'s> for GenerateDungeonSystem {
             }
         }
 
-        for (x, y) in room_wall_positions
-            .union(&corridor_wall_positions)
-            .cloned()
-            .collect::<HashSet<(i32, i32)>>()
-            .difference(&corridor_positions)
-        {
-            create_wall(*x, *y, &lazy_update);
+        for (x, y) in room_wall_positions.union(&corridor_wall_positions) {
+            if !corridor_positions.contains(&(*x, *y)) {
+                create_wall(*x, *y, &lazy_update);
+            }
         }
     }
 }
