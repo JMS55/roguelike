@@ -1,3 +1,4 @@
+mod advance_floor_system;
 mod ai_attack_player_system;
 mod attack_system;
 mod components;
@@ -7,6 +8,7 @@ mod movement_system;
 mod player_system;
 mod render_system;
 
+use advance_floor_system::AdvanceFloorSystem;
 use ai_attack_player_system::AIAttackPlayerSystem;
 use attack_system::AttackSystem;
 use components::*;
@@ -15,6 +17,7 @@ use generate_dungeon_system::GenerateDungeonSystem;
 use movement_system::MovementSystem;
 use player_system::{PlayerAction, PlayerSystem};
 use render_system::RenderSystem;
+
 use sdl2::event::Event;
 use sdl2::keyboard::{Mod, Scancode};
 use specs::{Builder, RunNow, World, WorldExt};
@@ -26,13 +29,16 @@ fn main() {
 
     let mut world = World::new();
     world.insert(IsPlayerTurn(true));
+    world.insert(ShouldAdvanceFloor(false));
     world.register::<PlayerComponent>();
     world.register::<PositionComponent>();
     world.register::<SpriteComponent>();
     world.register::<HealthComponent>();
+    world.register::<StaircaseComponent>();
     world.register::<AIAttackPlayerComponent>();
     world.register::<QueuedAttack>();
     world.register::<QueuedMovement>();
+    let mut advance_floor_system = AdvanceFloorSystem::new();
     let mut generate_dungeon_system = GenerateDungeonSystem::new();
     let mut player_system = PlayerSystem::new();
     let mut ai_attack_player_system = AIAttackPlayerSystem::new();
@@ -98,7 +104,7 @@ fn main() {
                         }
                     }
                     Some(Scancode::Q) if world.fetch::<IsPlayerTurn>().0 => {
-                        player_system.action = PlayerAction::Attack;
+                        player_system.action = PlayerAction::Interact;
                     }
                     Some(Scancode::E) if world.fetch::<IsPlayerTurn>().0 => {
                         player_system.action = PlayerAction::Pass;
@@ -119,12 +125,19 @@ fn main() {
                 ai_attack_player_system.run_now(&world);
                 world.insert(IsPlayerTurn(true));
             }
-            attack_system.run_now(&world);
-            world.maintain();
-            movement_system.run_now(&world);
-            world.maintain();
-            if world.fetch::<IsPlayerTurn>().0 {
-                drain_crystals_system.run_now(&world);
+            if world.fetch::<ShouldAdvanceFloor>().0 {
+                advance_floor_system.run_now(&world);
+                world.maintain();
+                generate_dungeon_system.run_now(&world);
+                world.maintain();
+            } else {
+                attack_system.run_now(&world);
+                world.maintain();
+                movement_system.run_now(&world);
+                world.maintain();
+                if world.fetch::<IsPlayerTurn>().0 {
+                    drain_crystals_system.run_now(&world);
+                }
             }
             time_accumulator -= Duration::from_nanos(16700000);
         }

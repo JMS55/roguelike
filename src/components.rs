@@ -41,6 +41,10 @@ pub struct HealthComponent {
 
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 #[storage(BTreeStorage)]
+pub struct StaircaseComponent {}
+
+#[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
+#[storage(BTreeStorage)]
 pub struct AIAttackPlayerComponent {}
 
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
@@ -65,6 +69,9 @@ pub enum MovementType {
 
 #[derive(Default, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 pub struct IsPlayerTurn(pub bool);
+
+#[derive(Default, Debug, Hash, PartialEq, Eq, Copy, Clone)]
+pub struct ShouldAdvanceFloor(pub bool);
 
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
 pub enum Direction {

@@ -1,4 +1,4 @@
-use crate::components::{Direction, PositionComponent, SpriteComponent};
+use crate::components::{Direction, PositionComponent, SpriteComponent, StaircaseComponent};
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
 use specs::{Builder, LazyUpdate, Read, System, WorldExt};
@@ -36,7 +36,7 @@ impl<'s> System<'s> for GenerateDungeonSystem {
                 y_radius: self.rng.gen_range(2, 8),
             };
             for other_room in &rooms {
-                let required_gap = self.rng.gen_range(1, 6);
+                let required_gap = self.rng.gen_range(3, 10);
                 let x_gap = (room.center_x - other_room.center_x).abs()
                     - room.x_radius as i32
                     - other_room.x_radius as i32
@@ -54,8 +54,12 @@ impl<'s> System<'s> for GenerateDungeonSystem {
         }
 
         let mut corridor_positions = HashSet::with_capacity((rooms.len() / 2) * 12);
-        for start_room in &rooms {
-            let end_room = &rooms[self.rng.gen_range(0, rooms.len())];
+        for (start_room_index, start_room) in rooms.iter().enumerate() {
+            let mut end_room_index = self.rng.gen_range(0, rooms.len());
+            while end_room_index == start_room_index {
+                end_room_index = self.rng.gen_range(0, rooms.len());
+            }
+            let end_room = &rooms[end_room_index];
             let start_x = self.rng.gen_range(
                 start_room.center_x - start_room.x_radius as i32,
                 start_room.center_x + start_room.x_radius as i32 + 1,
@@ -110,9 +114,30 @@ impl<'s> System<'s> for GenerateDungeonSystem {
             }
         }
 
-        for (x, y) in room_wall_positions.union(&corridor_wall_positions) {
-            if !corridor_positions.contains(&(*x, *y)) {
-                create_wall(*x, *y, &lazy_update);
+        let wall_positions = room_wall_positions
+            .union(&corridor_wall_positions)
+            .cloned()
+            .collect::<HashSet<(i32, i32)>>();
+        let wall_positions = wall_positions
+            .difference(&corridor_positions)
+            .cloned()
+            .collect::<HashSet<(i32, i32)>>();;
+        for (x, y) in &wall_positions {
+            create_wall(*x, *y, &lazy_update);
+        }
+
+        for room in rooms.iter().skip(1) {
+            let x = self.rng.gen_range(
+                room.center_x - room.x_radius as i32,
+                room.center_x + room.x_radius as i32 + 1,
+            );
+            let y = self.rng.gen_range(
+                room.center_y - room.y_radius as i32,
+                room.center_y + room.y_radius as i32 + 1,
+            );
+            if !wall_positions.contains(&(x, y)) {
+                create_staircase(x, y, &lazy_update);
+                break;
             }
         }
     }
@@ -148,6 +173,21 @@ fn create_wall(x: i32, y: i32, lazy_update: &Read<LazyUpdate>) {
                 facing_direction: Direction::Right,
             })
             .with(SpriteComponent { id: "blue" })
+            .build();
+    });
+}
+
+fn create_staircase(x: i32, y: i32, lazy_update: &Read<LazyUpdate>) {
+    lazy_update.exec_mut(move |world| {
+        world
+            .create_entity()
+            .with(PositionComponent {
+                x,
+                y,
+                facing_direction: Direction::Right,
+            })
+            .with(StaircaseComponent {})
+            .with(SpriteComponent { id: "pink" })
             .build();
     });
 }

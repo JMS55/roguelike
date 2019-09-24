@@ -1,6 +1,6 @@
 use crate::components::{
     Direction, HealthComponent, IsPlayerTurn, MovementType, PlayerComponent, PositionComponent,
-    QueuedAttack, QueuedMovement,
+    QueuedAttack, QueuedMovement, ShouldAdvanceFloor, StaircaseComponent,
 };
 use specs::{Entities, Join, ReadStorage, System, Write, WriteStorage};
 use std::collections::HashSet;
@@ -20,9 +20,11 @@ impl PlayerSystem {
 impl<'s> System<'s> for PlayerSystem {
     type SystemData = (
         Write<'s, IsPlayerTurn>,
+        Write<'s, ShouldAdvanceFloor>,
         WriteStorage<'s, PlayerComponent>,
         WriteStorage<'s, PositionComponent>,
         ReadStorage<'s, HealthComponent>,
+        ReadStorage<'s, StaircaseComponent>,
         WriteStorage<'s, QueuedMovement>,
         WriteStorage<'s, QueuedAttack>,
         Entities<'s>,
@@ -32,9 +34,11 @@ impl<'s> System<'s> for PlayerSystem {
         &mut self,
         (
             mut is_player_turn,
+            mut should_advance_floor,
             mut player_data,
             mut position_data,
             health_data,
+            staircase_data,
             mut queued_movement_data,
             mut queued_attack_data,
             entities,
@@ -83,9 +87,9 @@ impl<'s> System<'s> for PlayerSystem {
                 let player_position = (&player_data, &mut position_data).join().next().unwrap().1;
                 player_position.facing_direction = direction_to_face;
             }
-            PlayerAction::Attack => {
+            PlayerAction::Interact => {
                 let (player_entity, player, player_position) =
-                    (&entities, &mut player_data, &mut position_data)
+                    (&entities, &mut player_data, &position_data)
                         .join()
                         .next()
                         .unwrap();
@@ -97,16 +101,20 @@ impl<'s> System<'s> for PlayerSystem {
                     Direction::Left => target_x -= 1,
                     Direction::Right => target_x += 1,
                 };
-                let target_entity = (&entities, &health_data, &position_data)
+                let target_entity = (&entities, &position_data)
                     .join()
-                    .find(|(_, _, position)| position.x == target_x && position.y == target_y)
-                    .map(|(target_entity, _, _)| target_entity);
+                    .find(|(_, position)| position.x == target_x && position.y == target_y)
+                    .map(|(target_entity, _)| target_entity);
                 if let Some(target_entity) = target_entity {
-                    queued_attack_data
-                        .insert(player_entity, QueuedAttack { target_entity })
-                        .unwrap();
-                    *is_player_turn = IsPlayerTurn(false);
-                    player.turns_taken += 1;
+                    if staircase_data.get(target_entity).is_some() {
+                        *should_advance_floor = ShouldAdvanceFloor(true);
+                    } else if health_data.get(target_entity).is_some() {
+                        queued_attack_data
+                            .insert(player_entity, QueuedAttack { target_entity })
+                            .unwrap();
+                        *is_player_turn = IsPlayerTurn(false);
+                        player.turns_taken += 1;
+                    }
                 }
             }
             PlayerAction::None => {}
@@ -122,5 +130,5 @@ pub enum PlayerAction {
     Pass,
     Move(Direction),
     TurnToFace(Direction),
-    Attack,
+    Interact,
 }
