@@ -1,11 +1,15 @@
-use crate::components::{Direction, PlayerComponent, PositionComponent, ShouldAdvanceFloor};
+use crate::components::{
+    Direction, MessageLog, PlayerComponent, PositionComponent, ShouldAdvanceFloor,
+};
 use specs::{Entities, Join, System, Write, WriteStorage};
 
-pub struct AdvanceFloorSystem {}
+pub struct AdvanceFloorSystem {
+    current_floor: u32,
+}
 
 impl AdvanceFloorSystem {
     pub fn new() -> Self {
-        Self {}
+        Self { current_floor: 1 }
     }
 }
 
@@ -15,11 +19,12 @@ impl<'s> System<'s> for AdvanceFloorSystem {
         WriteStorage<'s, PositionComponent>,
         Entities<'s>,
         Write<'s, ShouldAdvanceFloor>,
+        Write<'s, MessageLog>,
     );
 
     fn run(
         &mut self,
-        (mut player_data, mut position_data, entities, mut should_advance_floor): Self::SystemData,
+        (mut player_data, mut position_data, entities, mut should_advance_floor, mut message_log): Self::SystemData,
     ) {
         let (player_entity, player, player_position) =
             (&entities, &mut player_data, &mut position_data)
@@ -39,6 +44,8 @@ impl<'s> System<'s> for AdvanceFloorSystem {
             }
         }
 
+        message_log.new_message(format!("Entering floor {}", self.current_floor));
+        self.current_floor += 1;
         *should_advance_floor = ShouldAdvanceFloor(false);
     }
 }

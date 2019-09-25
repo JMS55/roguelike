@@ -29,7 +29,8 @@ fn main() {
 
     let mut world = World::new();
     world.insert(IsPlayerTurn(true));
-    world.insert(ShouldAdvanceFloor(false));
+    world.insert(ShouldAdvanceFloor(true));
+    world.insert(MessageLog::new());
     world.register::<PlayerComponent>();
     world.register::<PositionComponent>();
     world.register::<SpriteComponent>();
@@ -46,7 +47,6 @@ fn main() {
     let mut movement_system = MovementSystem::new();
     let mut drain_crystals_system = DrainCrystalsSystem::new();
     let mut render_system = RenderSystem::new(&sdl_context);
-
     world
         .create_entity()
         .with(PlayerComponent::new(10000))
@@ -61,8 +61,6 @@ fn main() {
         })
         .with(SpriteComponent { id: "red" })
         .build();
-    generate_dungeon_system.run_now(&world);
-    world.maintain();
 
     let mut time_accumulator = Duration::from_secs(0);
     let mut previous_time = Instant::now();

@@ -1,6 +1,7 @@
 use specs::storage::BTreeStorage;
 use specs::{Component, Entity};
 use specs_derive::Component;
+use std::time::{Duration, Instant};
 
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 #[storage(BTreeStorage)]
@@ -72,6 +73,38 @@ pub struct IsPlayerTurn(pub bool);
 
 #[derive(Default, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 pub struct ShouldAdvanceFloor(pub bool);
+
+#[derive(Default, Debug, Hash, PartialEq, Eq, Clone)]
+pub struct MessageLog {
+    messages: Vec<Message>,
+}
+
+impl MessageLog {
+    pub fn new() -> Self {
+        Self {
+            messages: Vec::new(),
+        }
+    }
+
+    pub fn new_message<T: Into<String>>(&mut self, message: T) {
+        self.messages.push(Message {
+            text: message.into(),
+            time_created: Instant::now(),
+        });
+    }
+
+    pub fn recent_messages(&mut self) -> impl Iterator<Item = &Message> {
+        self.messages
+            .retain(|message| message.time_created.elapsed() < Duration::from_secs(5));
+        self.messages.iter().rev()
+    }
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+pub struct Message {
+    pub text: String,
+    pub time_created: Instant,
+}
 
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
 pub enum Direction {

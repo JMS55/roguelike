@@ -121,7 +121,7 @@ impl<'s> System<'s> for GenerateDungeonSystem {
         let wall_positions = wall_positions
             .difference(&corridor_positions)
             .cloned()
-            .collect::<HashSet<(i32, i32)>>();;
+            .collect::<HashSet<(i32, i32)>>();
         for (x, y) in &wall_positions {
             create_wall(*x, *y, &lazy_update);
         }
