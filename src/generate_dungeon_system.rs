@@ -126,19 +126,16 @@ impl<'s> System<'s> for GenerateDungeonSystem {
             create_wall(*x, *y, &lazy_update);
         }
 
-        for room in rooms.iter().skip(1) {
+        if let Some(staircase_room) = rooms.get(1) {
             let x = self.rng.gen_range(
-                room.center_x - room.x_radius as i32 - 1,
-                room.center_x + room.x_radius as i32,
+                staircase_room.center_x - staircase_room.x_radius as i32 + 1,
+                staircase_room.center_x + staircase_room.x_radius as i32,
             );
             let y = self.rng.gen_range(
-                room.center_y - room.y_radius as i32 - 1,
-                room.center_y + room.y_radius as i32,
+                staircase_room.center_y - staircase_room.y_radius as i32 + 1,
+                staircase_room.center_y + staircase_room.y_radius as i32,
             );
-            if !wall_positions.contains(&(x, y)) {
-                create_staircase(x, y, &lazy_update);
-                break;
-            }
+            create_staircase(x, y, &lazy_update);
         }
     }
 }
