@@ -76,7 +76,7 @@ impl<'s> System<'s> for RenderSystem {
             let time_since_message_creation = message.time_created.elapsed();
             if time_since_message_creation > Duration::from_secs(2) {
                 alpha = (1.0
-                    - 255.0 * time_since_message_creation.div_duration_f32(Duration::from_secs(5)))
+                    - 255.0 * time_since_message_creation.div_duration_f32(Duration::from_secs(6)))
                     as u8;
             }
             let surface = font

@@ -96,7 +96,7 @@ impl MessageLog {
 
     pub fn recent_messages(&mut self) -> impl Iterator<Item = &Message> {
         self.messages
-            .retain(|message| message.time_created.elapsed() < Duration::from_secs(5));
+            .retain(|message| message.time_created.elapsed() < Duration::from_secs(6));
         self.messages.iter().rev()
     }
 }
