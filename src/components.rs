@@ -86,9 +86,10 @@ impl MessageLog {
         }
     }
 
-    pub fn new_message<T: Into<String>>(&mut self, message: T) {
+    pub fn new_message<T: Into<String>>(&mut self, message: T, color: MessageColor) {
         self.messages.push(Message {
             text: message.into(),
+            color,
             time_created: Instant::now(),
         });
     }
@@ -103,7 +104,15 @@ impl MessageLog {
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct Message {
     pub text: String,
+    pub color: MessageColor,
     pub time_created: Instant,
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+pub enum MessageColor {
+    White,
+    Orange,
+    Red,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]

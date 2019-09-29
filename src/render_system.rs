@@ -1,4 +1,6 @@
-use crate::components::{MessageLog, PlayerComponent, PositionComponent, SpriteComponent};
+use crate::components::{
+    MessageColor, MessageLog, PlayerComponent, PositionComponent, SpriteComponent,
+};
 use sdl2::image::LoadTexture;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
@@ -79,7 +81,7 @@ impl<'s> System<'s> for RenderSystem {
             }
             let surface = font
                 .render(&format!("* {}", message.text))
-                .blended_wrapped(Color::RGBA(255, 255, 255, alpha), 15 * 8 * 4 - 4)
+                .blended_wrapped(message.color.sdl_color(), 15 * 8 * 4 - 4)
                 .unwrap();
             let texture = texture_creator
                 .create_texture_from_surface(&surface)
@@ -101,5 +103,16 @@ impl<'s> System<'s> for RenderSystem {
         }
 
         self.canvas.present();
+    }
+}
+
+impl MessageColor {
+    pub fn sdl_color(&self) -> Color {
+        let (r, g, b) = match self {
+            MessageColor::White => (255, 255, 255),
+            MessageColor::Orange => (255, 96, 0),
+            MessageColor::Red => (255, 0, 0),
+        };
+        Color::RGB(r, g, b)
     }
 }

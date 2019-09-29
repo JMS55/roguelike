@@ -117,23 +117,23 @@ fn main() {
         time_accumulator += current_time - previous_time;
         previous_time = current_time;
         while time_accumulator >= Duration::from_nanos(16700000) {
-            if world.fetch::<IsPlayerTurn>().0 {
-                player_system.run_now(&world);
-            } else {
-                ai_attack_player_system.run_now(&world);
-                world.insert(IsPlayerTurn(true));
-            }
             if world.fetch::<ShouldAdvanceFloor>().0 {
                 advance_floor_system.run_now(&world);
                 world.maintain();
                 generate_dungeon_system.run_now(&world);
                 world.maintain();
             } else {
+                if world.fetch::<IsPlayerTurn>().0 {
+                    player_system.run_now(&world);
+                } else {
+                    ai_attack_player_system.run_now(&world);
+                    world.insert(IsPlayerTurn(true));
+                }
                 attack_system.run_now(&world);
                 world.maintain();
                 movement_system.run_now(&world);
                 world.maintain();
-                if world.fetch::<IsPlayerTurn>().0 {
+                if !world.fetch::<IsPlayerTurn>().0 {
                     drain_crystals_system.run_now(&world);
                 }
             }

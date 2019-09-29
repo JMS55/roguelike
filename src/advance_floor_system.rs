@@ -1,5 +1,5 @@
 use crate::components::{
-    Direction, MessageLog, PlayerComponent, PositionComponent, ShouldAdvanceFloor,
+    Direction, MessageColor, MessageLog, PlayerComponent, PositionComponent, ShouldAdvanceFloor,
 };
 use specs::{Entities, Join, System, Write, WriteStorage};
 
@@ -44,7 +44,10 @@ impl<'s> System<'s> for AdvanceFloorSystem {
             }
         }
 
-        message_log.new_message(format!("Entering floor {}", self.current_floor));
+        message_log.new_message(
+            format!("Entering floor {}", self.current_floor),
+            MessageColor::White,
+        );
         self.current_floor += 1;
         *should_advance_floor = ShouldAdvanceFloor(false);
     }

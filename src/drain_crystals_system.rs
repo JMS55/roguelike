@@ -1,36 +1,40 @@
-use crate::components::PlayerComponent;
-use specs::{Join, System, WriteStorage};
+use crate::components::{MessageColor, MessageLog, PlayerComponent};
+use specs::{Join, System, Write, WriteStorage};
 
-pub struct DrainCrystalsSystem {
-    previous_turns_taken: u32,
-}
+pub struct DrainCrystalsSystem {}
 
 impl DrainCrystalsSystem {
     pub fn new() -> Self {
-        Self {
-            previous_turns_taken: 0,
-        }
+        Self {}
     }
 }
 
 impl<'s> System<'s> for DrainCrystalsSystem {
-    type SystemData = WriteStorage<'s, PlayerComponent>;
+    type SystemData = (WriteStorage<'s, PlayerComponent>, Write<'s, MessageLog>);
 
-    fn run(&mut self, mut player_data: Self::SystemData) {
+    fn run(&mut self, (mut player_data, mut message_log): Self::SystemData) {
         let player = (&mut player_data).join().next().unwrap();
-        if self.previous_turns_taken != player.turns_taken {
-            let crystals_to_subtract = match player.turns_taken {
-                0..=500 => 0,
-                501..=601 => 2,
-                602..=702 => 5,
-                703..=903 => 10,
-                _ => 20,
-            };
-            player.crystals = player
-                .crystals
-                .checked_sub(crystals_to_subtract)
-                .unwrap_or(0);
-            self.previous_turns_taken += 1;
+
+        if let Some((message, color)) = match player.turns_taken {
+            500 => {
+                Some(("You feel a sense of... uneanse. Perhaps you should consider leaving soon...", MessageColor::White))
+            }
+            600 => Some(("The sense of danger grows. Fatigue starts to overcome your body. You must leave before it's too late!", MessageColor::Orange)),
+            700 => Some(("YOUR INSTINCTS SCREAM TO RUN. YOUR BODY GROWS HEAVY WITH DESPAIR.", MessageColor::Red)),
+            _ => None,
+        } {
+            message_log.new_message(message, color);
         }
+
+        let crystals_to_subtract = match player.turns_taken {
+            0..=499 => 0,
+            500..=599 => 2,
+            600..=699 => 5,
+            _ => 10,
+        };
+        player.crystals = player
+            .crystals
+            .checked_sub(crystals_to_subtract)
+            .unwrap_or(0);
     }
 }
