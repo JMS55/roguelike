@@ -81,7 +81,7 @@ impl<'s> System<'s> for RenderSystem {
             }
             let surface = font
                 .render(&format!("* {}", message.text))
-                .blended_wrapped(message.color.sdl_color(), 15 * 8 * 4 - 4)
+                .blended_wrapped(message.color.sdl_color(alpha), 15 * 8 * 4 - 4)
                 .unwrap();
             let texture = texture_creator
                 .create_texture_from_surface(&surface)
@@ -107,12 +107,12 @@ impl<'s> System<'s> for RenderSystem {
 }
 
 impl MessageColor {
-    pub fn sdl_color(&self) -> Color {
+    pub fn sdl_color(&self, alpha: u8) -> Color {
         let (r, g, b) = match self {
             MessageColor::White => (255, 255, 255),
             MessageColor::Orange => (255, 96, 0),
             MessageColor::Red => (255, 0, 0),
         };
-        Color::RGB(r, g, b)
+        Color::RGBA(r, g, b, alpha)
     }
 }
