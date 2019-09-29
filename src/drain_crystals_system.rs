@@ -17,7 +17,7 @@ impl<'s> System<'s> for DrainCrystalsSystem {
 
         if let Some((message, color)) = match player.turns_taken {
             500 => {
-                Some(("You feel a sense of... uneanse. Perhaps you should consider leaving soon...", MessageColor::White))
+                Some(("You feel a sense of... unease. Perhaps you should consider leaving soon...", MessageColor::White))
             }
             600 => Some(("The sense of danger grows. Fatigue starts to overcome your body. You must leave before it's too late!", MessageColor::Orange)),
             700 => Some(("YOUR INSTINCTS SCREAM TO RUN. YOUR BODY GROWS HEAVY WITH DESPAIR.", MessageColor::Red)),
