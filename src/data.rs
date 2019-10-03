@@ -54,6 +54,16 @@ impl Health {
         }
     }
 }
+
+#[derive(Component, Debug, PartialEq, Copy, Clone)]
+#[storage(BTreeStorage)]
+pub enum HealAttackerOnDeath {
+    Full,
+    Amount(u32),
+    MaxPercentage(f32),
+    CurrentPercentage(f32),
+}
+
 #[derive(Component, Copy, Clone)]
 #[storage(BTreeStorage)]
 pub struct AI {

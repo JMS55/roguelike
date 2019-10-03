@@ -28,6 +28,7 @@ fn main() {
     world.register::<Position>();
     world.register::<Sprite>();
     world.register::<Health>();
+    world.register::<HealAttackerOnDeath>();
     world.register::<AI>();
     world.register::<RNG>();
     world.register::<Intangible>();

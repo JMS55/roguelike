@@ -24,12 +24,13 @@ pub fn create_phase_bat(x: i32, y: i32, world: &mut World) {
             };
 
             if ai_position.is_next_to(&player_position) {
-                attack(3, ai_entity, player_entity, world);
-                if {
+                let attack_twice = {
                     let mut rng_data = world.write_storage::<RNG>();
                     let ai_rng = rng_data.get_mut(ai_entity).unwrap();
                     ai_rng.0.gen_ratio(1, 10)
-                } {
+                };
+                attack(3, ai_entity, player_entity, world);
+                if attack_twice {
                     attack(2, ai_entity, player_entity, world);
                 }
             } else {
