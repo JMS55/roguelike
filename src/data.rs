@@ -146,17 +146,23 @@ impl MessageLog {
         }
     }
 
-    pub fn new_message<T: Into<String>>(&mut self, message: T, color: MessageColor) {
+    pub fn new_message<T: Into<String>>(
+        &mut self,
+        message: T,
+        color: MessageColor,
+        display_length: MessageDisplayLength,
+    ) {
         self.messages.push(Message {
             text: message.into(),
             color,
+            display_length,
             time_created: Instant::now(),
         });
     }
 
     pub fn recent_messages(&mut self) -> impl Iterator<Item = &Message> {
         self.messages
-            .retain(|message| message.time_created.elapsed() < Duration::from_secs(6));
+            .retain(|message| message.time_created.elapsed() <= message.display_length.duration());
         self.messages.iter().rev()
     }
 
@@ -169,6 +175,7 @@ impl MessageLog {
 pub struct Message {
     pub text: String,
     pub color: MessageColor,
+    pub display_length: MessageDisplayLength,
     pub time_created: Instant,
 }
 
@@ -177,6 +184,23 @@ pub enum MessageColor {
     White,
     Orange,
     Red,
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
+pub enum MessageDisplayLength {
+    Short,
+    Medium,
+    Long,
+}
+
+impl MessageDisplayLength {
+    pub fn duration(&self) -> Duration {
+        Duration::from_secs(match self {
+            MessageDisplayLength::Short => 2,
+            MessageDisplayLength::Medium => 4,
+            MessageDisplayLength::Long => 6,
+        })
+    }
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]

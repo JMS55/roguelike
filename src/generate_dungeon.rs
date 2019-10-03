@@ -1,4 +1,4 @@
-use crate::data::{MessageColor, MessageLog, Player, Position};
+use crate::data::{MessageColor, MessageDisplayLength, MessageLog, Player, Position};
 use crate::entities;
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
@@ -47,6 +47,7 @@ impl GenerateDungeonSystem {
         world.fetch_mut::<MessageLog>().new_message(
             format!("Entering floor {}", self.next_floor),
             MessageColor::White,
+            MessageDisplayLength::Medium,
         );
         self.next_floor += 1;
 

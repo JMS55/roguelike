@@ -1,4 +1,4 @@
-use crate::data::{MessageColor, MessageLog, Player};
+use crate::data::{MessageColor, MessageDisplayLength, MessageLog, Player};
 use specs::{Join, World, WorldExt};
 
 pub fn drain_crystals_system(world: &mut World) {
@@ -14,7 +14,7 @@ pub fn drain_crystals_system(world: &mut World) {
             700 => Some(("YOUR INSTINCTS SCREAM TO RUN. YOUR BODY GROWS HEAVY WITH DESPAIR.", MessageColor::Red)),
             _ => None,
         } {
-            message_log.new_message(message, color);
+            message_log.new_message(message, color, MessageDisplayLength::Long);
         }
 
     let crystals_to_subtract = match player.turns_taken {

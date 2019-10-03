@@ -1,4 +1,6 @@
-use crate::data::{HealAttackerOnDeath, Health, MessageColor, MessageLog, Name};
+use crate::data::{
+    HealAttackerOnDeath, Health, MessageColor, MessageDisplayLength, MessageLog, Name,
+};
 use specs::{Entity, World, WorldExt};
 
 pub fn attack(damage: u32, attacker: Entity, target: Entity, world: &mut World) {
@@ -23,6 +25,7 @@ pub fn attack(damage: u32, attacker: Entity, target: Entity, world: &mut World) 
                 attacker_name.0, target_name.0, damage,
             ),
             MessageColor::White,
+            MessageDisplayLength::Short,
         );
 
         let target_health = &mut health_data.get_mut(target).unwrap().current_health;

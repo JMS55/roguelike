@@ -2,7 +2,7 @@ use crate::data::{GameState, MessageColor, MessageLog, Player, Position, Sprite}
 use sdl2::image::LoadTexture;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use sdl2::render::WindowCanvas;
+use sdl2::render::{BlendMode, WindowCanvas};
 use sdl2::ttf::Sdl2TtfContext;
 use sdl2::Sdl;
 use specs::{Join, World, WorldExt};
@@ -67,11 +67,11 @@ impl RenderSystem {
             for (index, message) in message_log.recent_messages().enumerate() {
                 let mut alpha = 255;
                 let time_since_message_creation = message.time_created.elapsed();
-                if time_since_message_creation > Duration::from_secs(2) {
-                    alpha = (1.0
-                        - 255.0
-                            * time_since_message_creation.div_duration_f32(Duration::from_secs(6)))
-                        as u8;
+                let fade_time = message.display_length.duration().div_f32(2.0);
+                if time_since_message_creation > fade_time {
+                    let t = (time_since_message_creation - fade_time).div_duration_f32(fade_time);
+                    alpha = (255.0 - (t * 255.0)).round() as u8;
+                    alpha = alpha.max(1); // For some reason SDL2 seems to draw at full opacity if alpha = 0
                 }
                 let surface = font
                     .render(&format!("* {}", message.text))
@@ -89,7 +89,11 @@ impl RenderSystem {
                         texture_info.width,
                         texture_info.height,
                     );
+                    self.canvas.set_draw_color(Color::RGBA(0, 0, 0, alpha));
+                    self.canvas.set_blend_mode(BlendMode::Blend);
                     self.canvas.fill_rect(dest_rect).unwrap();
+                    self.canvas.set_draw_color(Color::RGBA(0, 0, 0, 255));
+                    self.canvas.set_blend_mode(BlendMode::None);
                     self.canvas.copy(&texture, None, dest_rect).unwrap();
                 } else {
                     break;
