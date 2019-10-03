@@ -1,25 +1,55 @@
-use crate::components::{Direction, PositionComponent, SpriteComponent, StaircaseComponent};
+use crate::data::{MessageColor, MessageLog, Player, Position};
+use crate::entities;
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
-use specs::{Builder, LazyUpdate, Read, System, WorldExt};
+use specs::{Join, World, WorldExt};
 use std::collections::HashSet;
 
 pub struct GenerateDungeonSystem {
+    next_floor: u32,
     rng: Pcg64,
 }
 
 impl GenerateDungeonSystem {
     pub fn new() -> Self {
         Self {
+            next_floor: 1,
             rng: Pcg64::from_entropy(),
         }
     }
 }
 
-impl<'s> System<'s> for GenerateDungeonSystem {
-    type SystemData = Read<'s, LazyUpdate>;
+impl GenerateDungeonSystem {
+    pub fn run(&mut self, world: &mut World) {
+        let mut non_player_entities = Vec::new();
+        {
+            let entities = world.entities();
+            let mut player_data = world.write_storage::<Player>();
+            let mut position_data = world.write_storage::<Position>();
+            let (player_entity, player, player_position) =
+                (&entities, &mut player_data, &mut position_data)
+                    .join()
+                    .next()
+                    .unwrap();
+            *player_position = Position::new(0, 0);
+            player.turns_taken = 0;
 
-    fn run(&mut self, lazy_update: Self::SystemData) {
+            for entity in (&entities).join() {
+                if entity != player_entity {
+                    non_player_entities.push(entity);
+                }
+            }
+        }
+        for entity in non_player_entities {
+            world.delete_entity(entity).unwrap();
+        }
+
+        world.fetch_mut::<MessageLog>().new_message(
+            format!("Entering floor {}", self.next_floor),
+            MessageColor::White,
+        );
+        self.next_floor += 1;
+
         let mut rooms = Vec::with_capacity(41);
         let starting_room = Room {
             center_x: 0,
@@ -123,7 +153,7 @@ impl<'s> System<'s> for GenerateDungeonSystem {
             .cloned()
             .collect::<HashSet<(i32, i32)>>();
         for (x, y) in &wall_positions {
-            create_wall(*x, *y, &lazy_update);
+            entities::create_wall(*x, *y, world);
         }
 
         if let Some(staircase_room) = rooms.get(1) {
@@ -135,7 +165,7 @@ impl<'s> System<'s> for GenerateDungeonSystem {
                 staircase_room.center_y - staircase_room.y_radius as i32 + 1,
                 staircase_room.center_y + staircase_room.y_radius as i32,
             );
-            create_staircase(x, y, &lazy_update);
+            entities::create_staircase(x, y, world);
         }
     }
 }
@@ -158,33 +188,4 @@ fn get_neighbors(x: i32, y: i32) -> [(i32, i32); 8] {
         (x - 1, y + 1),
         (x - 1, y - 1),
     ]
-}
-
-fn create_wall(x: i32, y: i32, lazy_update: &Read<LazyUpdate>) {
-    lazy_update.exec_mut(move |world| {
-        world
-            .create_entity()
-            .with(PositionComponent {
-                x,
-                y,
-                facing_direction: Direction::Right,
-            })
-            .with(SpriteComponent { id: "blue" })
-            .build();
-    });
-}
-
-fn create_staircase(x: i32, y: i32, lazy_update: &Read<LazyUpdate>) {
-    lazy_update.exec_mut(move |world| {
-        world
-            .create_entity()
-            .with(PositionComponent {
-                x,
-                y,
-                facing_direction: Direction::Right,
-            })
-            .with(StaircaseComponent {})
-            .with(SpriteComponent { id: "pink" })
-            .build();
-    });
 }

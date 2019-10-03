@@ -1,26 +1,22 @@
-mod advance_floor_system;
-mod ai_attack_player_system;
-mod attack_system;
-mod components;
-mod drain_crystals_system;
-mod generate_dungeon_system;
-mod movement_system;
-mod player_system;
-mod render_system;
+mod attack;
+mod data;
+mod drain_crystals;
+mod enemy_controller;
+mod entities;
+mod generate_dungeon;
+mod movement;
+mod player_controller;
+mod render;
 
-use advance_floor_system::AdvanceFloorSystem;
-use ai_attack_player_system::AIAttackPlayerSystem;
-use attack_system::AttackSystem;
-use components::*;
-use drain_crystals_system::DrainCrystalsSystem;
-use generate_dungeon_system::GenerateDungeonSystem;
-use movement_system::MovementSystem;
-use player_system::{PlayerAction, PlayerSystem};
-use render_system::RenderSystem;
-
+use data::*;
+use drain_crystals::drain_crystals_system;
+use enemy_controller::enemy_controller_system;
+use generate_dungeon::GenerateDungeonSystem;
+use player_controller::{PlayerActed, PlayerAction, PlayerControllerSystem};
+use render::RenderSystem;
 use sdl2::event::Event;
 use sdl2::keyboard::{Mod, Scancode};
-use specs::{Builder, RunNow, World, WorldExt};
+use specs::{World, WorldExt};
 use std::time::{Duration, Instant};
 
 fn main() {
@@ -28,43 +24,26 @@ fn main() {
     let mut event_pump = sdl_context.event_pump().unwrap();
 
     let mut world = World::new();
-    world.insert(IsPlayerTurn(true));
-    world.insert(ShouldAdvanceFloor(true));
+    world.register::<Name>();
+    world.register::<Position>();
+    world.register::<Sprite>();
+    world.register::<Health>();
+    world.register::<AI>();
+    world.register::<RNG>();
+    world.register::<Intangible>();
+    world.register::<Player>();
+    world.register::<Staircase>();
+    world.register::<Spawner>();
+    world.insert(GameState::NewGame);
     world.insert(MessageLog::new());
-    world.register::<PlayerComponent>();
-    world.register::<PositionComponent>();
-    world.register::<SpriteComponent>();
-    world.register::<HealthComponent>();
-    world.register::<StaircaseComponent>();
-    world.register::<AIAttackPlayerComponent>();
-    world.register::<QueuedAttack>();
-    world.register::<QueuedMovement>();
-    let mut advance_floor_system = AdvanceFloorSystem::new();
+    let mut player_controller_system = PlayerControllerSystem::new();
     let mut generate_dungeon_system = GenerateDungeonSystem::new();
-    let mut player_system = PlayerSystem::new();
-    let mut ai_attack_player_system = AIAttackPlayerSystem::new();
-    let mut attack_system = AttackSystem::new();
-    let mut movement_system = MovementSystem::new();
-    let mut drain_crystals_system = DrainCrystalsSystem::new();
     let mut render_system = RenderSystem::new(&sdl_context);
-    world
-        .create_entity()
-        .with(PlayerComponent::new(10000))
-        .with(PositionComponent {
-            x: 0,
-            y: 0,
-            facing_direction: Direction::Right,
-        })
-        .with(HealthComponent {
-            current_health: 10,
-            max_health: 10,
-        })
-        .with(SpriteComponent { id: "red" })
-        .build();
 
     let mut time_accumulator = Duration::from_secs(0);
     let mut previous_time = Instant::now();
     'game_loop: loop {
+        let game_state = *world.fetch::<GameState>();
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. } => break 'game_loop,
@@ -73,39 +52,57 @@ fn main() {
                 } => match scancode {
                     #[cfg(debug_assertions)]
                     Some(Scancode::Escape) => break 'game_loop,
-                    Some(Scancode::W) if world.fetch::<IsPlayerTurn>().0 => {
-                        if keymod.contains(Mod::LSHIFTMOD) {
-                            player_system.action = PlayerAction::TurnToFace(Direction::Up);
-                        } else {
-                            player_system.action = PlayerAction::Move(Direction::Up);
+                    Some(Scancode::W) => {
+                        if game_state == GameState::PlayerTurn {
+                            if keymod.contains(Mod::LSHIFTMOD) {
+                                player_controller_system.action = PlayerAction::Turn(Direction::Up);
+                            } else {
+                                player_controller_system.action = PlayerAction::Move(Direction::Up);
+                            }
                         }
                     }
-                    Some(Scancode::A) if world.fetch::<IsPlayerTurn>().0 => {
-                        if keymod.contains(Mod::LSHIFTMOD) {
-                            player_system.action = PlayerAction::TurnToFace(Direction::Left);
-                        } else {
-                            player_system.action = PlayerAction::Move(Direction::Left);
+                    Some(Scancode::A) => {
+                        if game_state == GameState::PlayerTurn {
+                            if keymod.contains(Mod::LSHIFTMOD) {
+                                player_controller_system.action =
+                                    PlayerAction::Turn(Direction::Left);
+                            } else {
+                                player_controller_system.action =
+                                    PlayerAction::Move(Direction::Left);
+                            }
                         }
                     }
-                    Some(Scancode::S) if world.fetch::<IsPlayerTurn>().0 => {
-                        if keymod.contains(Mod::LSHIFTMOD) {
-                            player_system.action = PlayerAction::TurnToFace(Direction::Down);
-                        } else {
-                            player_system.action = PlayerAction::Move(Direction::Down);
+                    Some(Scancode::S) => {
+                        if game_state == GameState::PlayerTurn {
+                            if keymod.contains(Mod::LSHIFTMOD) {
+                                player_controller_system.action =
+                                    PlayerAction::Turn(Direction::Down);
+                            } else {
+                                player_controller_system.action =
+                                    PlayerAction::Move(Direction::Down);
+                            }
                         }
                     }
-                    Some(Scancode::D) if world.fetch::<IsPlayerTurn>().0 => {
-                        if keymod.contains(Mod::LSHIFTMOD) {
-                            player_system.action = PlayerAction::TurnToFace(Direction::Right);
-                        } else {
-                            player_system.action = PlayerAction::Move(Direction::Right);
+                    Some(Scancode::D) => {
+                        if game_state == GameState::PlayerTurn {
+                            if keymod.contains(Mod::LSHIFTMOD) {
+                                player_controller_system.action =
+                                    PlayerAction::Turn(Direction::Right);
+                            } else {
+                                player_controller_system.action =
+                                    PlayerAction::Move(Direction::Right);
+                            }
                         }
                     }
-                    Some(Scancode::Q) if world.fetch::<IsPlayerTurn>().0 => {
-                        player_system.action = PlayerAction::Interact;
+                    Some(Scancode::Q) => {
+                        if game_state == GameState::PlayerTurn {
+                            player_controller_system.action = PlayerAction::Interact;
+                        }
                     }
-                    Some(Scancode::E) if world.fetch::<IsPlayerTurn>().0 => {
-                        player_system.action = PlayerAction::Pass;
+                    Some(Scancode::E) => {
+                        if game_state == GameState::PlayerTurn {
+                            player_controller_system.action = PlayerAction::Pass;
+                        }
                     }
                     _ => {}
                 },
@@ -117,28 +114,28 @@ fn main() {
         time_accumulator += current_time - previous_time;
         previous_time = current_time;
         while time_accumulator >= Duration::from_nanos(16700000) {
-            if world.fetch::<ShouldAdvanceFloor>().0 {
-                advance_floor_system.run_now(&world);
-                world.maintain();
-                generate_dungeon_system.run_now(&world);
-                world.maintain();
-            } else {
-                if world.fetch::<IsPlayerTurn>().0 {
-                    player_system.run_now(&world);
-                } else {
-                    ai_attack_player_system.run_now(&world);
-                    world.insert(IsPlayerTurn(true));
+            let game_state = *world.fetch::<GameState>();
+            match game_state {
+                GameState::NewGame => {
+                    world.insert(GameState::PlayerTurn);
+                    world.fetch_mut::<MessageLog>().empty();
+                    entities::create_player(&mut world);
+                    generate_dungeon_system.run(&mut world);
                 }
-                attack_system.run_now(&world);
-                world.maintain();
-                movement_system.run_now(&world);
-                world.maintain();
-                if !world.fetch::<IsPlayerTurn>().0 {
-                    drain_crystals_system.run_now(&world);
+                GameState::PlayerTurn => {
+                    if player_controller_system.run(&mut generate_dungeon_system, &mut world)
+                        == PlayerActed(true)
+                    {
+                        drain_crystals_system(&mut world);
+                    }
+                }
+                GameState::EnemyTurn => {
+                    enemy_controller_system(&mut world);
+                    world.insert(GameState::PlayerTurn);
                 }
             }
             time_accumulator -= Duration::from_nanos(16700000);
         }
-        render_system.run_now(&world);
+        render_system.run(&mut world);
     }
 }
