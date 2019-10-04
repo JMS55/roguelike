@@ -6,7 +6,6 @@ use sdl2::render::{BlendMode, WindowCanvas};
 use sdl2::ttf::Sdl2TtfContext;
 use sdl2::Sdl;
 use specs::{Join, World, WorldExt};
-use std::time::Duration;
 
 pub struct RenderSystem {
     canvas: WindowCanvas,
