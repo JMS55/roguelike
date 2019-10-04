@@ -204,7 +204,7 @@ pub enum MessageDisplayLength {
 impl MessageDisplayLength {
     pub fn duration(&self) -> Duration {
         Duration::from_secs(match self {
-            MessageDisplayLength::Short => 2,
+            MessageDisplayLength::Short => 3,
             MessageDisplayLength::Medium => 4,
             MessageDisplayLength::Long => 6,
         })
