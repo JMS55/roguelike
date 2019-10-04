@@ -11,7 +11,7 @@ pub fn create_player(world: &mut World) {
         .with(Name("Player"))
         .with(Player::new())
         .with(Position::new(0, 0))
-        .with(Health::new(20))
+        .with(Attackable::new(20))
         .with(Sprite::new("red"))
         .build();
 }

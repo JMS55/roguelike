@@ -27,7 +27,7 @@ fn main() {
     world.register::<Name>();
     world.register::<Position>();
     world.register::<Sprite>();
-    world.register::<Health>();
+    world.register::<Attackable>();
     world.register::<HealAttackerOnDeath>();
     world.register::<AI>();
     world.register::<RNG>();

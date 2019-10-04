@@ -39,18 +39,26 @@ impl Sprite {
     }
 }
 
-#[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
+#[derive(Component, Debug, Hash, PartialEq, Eq, Clone)]
 #[storage(BTreeStorage)]
-pub struct Health {
+pub struct Attackable {
     pub current_health: u32,
     pub max_health: u32,
+
+    pub has_oozing_buff: bool,
+
+    pub oozed_debuff_stacks: u32,
 }
 
-impl Health {
+impl Attackable {
     pub fn new(max_health: u32) -> Self {
         Self {
             current_health: max_health,
             max_health,
+
+            has_oozing_buff: false,
+
+            oozed_debuff_stacks: 0,
         }
     }
 }
