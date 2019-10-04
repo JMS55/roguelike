@@ -49,7 +49,8 @@ impl PlayerControllerSystem {
                 is_facing_staircase
             }
             PlayerAction::Turn(direction) => {
-                movement::try_turn(player_entity, direction, world).is_ok()
+                let _ = movement::try_turn(player_entity, direction, world);
+                false
             }
             PlayerAction::Move(direction) => {
                 movement::try_move(player_entity, direction, world).is_ok()
