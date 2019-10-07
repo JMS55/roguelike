@@ -88,6 +88,41 @@ pub fn pathfind(
     path
 }
 
+pub fn try_move_towards(
+    moving_entity: Entity,
+    target: Entity,
+    world: &mut World,
+) -> Result<(), ()> {
+    let (moving_entity_position, target_position) = {
+        let position_data = world.read_storage::<Position>();
+        (
+            *position_data.get(moving_entity).unwrap(),
+            *position_data.get(target).unwrap(),
+        )
+    };
+    let path = pathfind(
+        moving_entity_position.x,
+        moving_entity_position.y,
+        target_position.x,
+        target_position.y,
+        world,
+    );
+    if let Some((new_x, new_y)) = path.get(0) {
+        let direction = match (
+            new_x - moving_entity_position.x,
+            new_y - moving_entity_position.y,
+        ) {
+            (0, 1) => Direction::Up,
+            (0, -1) => Direction::Down,
+            (-1, 0) => Direction::Left,
+            (1, 0) => Direction::Right,
+            _ => unreachable!(),
+        };
+        try_move(moving_entity, direction, world)?
+    }
+    Ok(())
+}
+
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
 struct FrontierNode {
     x: i32,

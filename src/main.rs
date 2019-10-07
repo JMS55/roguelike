@@ -28,15 +28,14 @@ fn main() {
     world.register::<Position>();
     world.register::<Sprite>();
     world.register::<Attackable>();
-    world.register::<HealAttackerOnDeath>();
     world.register::<AI>();
-    world.register::<RNG>();
     world.register::<Intangible>();
     world.register::<Player>();
     world.register::<Staircase>();
     world.register::<Spawner>();
     world.insert(GameState::NewGame);
     world.insert(MessageLog::new());
+    world.insert(RNG::new());
     let mut player_controller_system = PlayerControllerSystem::new();
     let mut generate_dungeon_system = GenerateDungeonSystem::new();
     let mut render_system = RenderSystem::new(&sdl_context);
@@ -120,6 +119,7 @@ fn main() {
                 GameState::NewGame => {
                     world.insert(GameState::PlayerTurn);
                     world.fetch_mut::<MessageLog>().empty();
+                    world.insert(RNG::new());
                     entities::create_player(&mut world);
                     generate_dungeon_system.run(&mut world);
                 }

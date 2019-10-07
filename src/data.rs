@@ -39,11 +39,12 @@ impl Sprite {
     }
 }
 
-#[derive(Component, Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(Component, Clone)]
 #[storage(BTreeStorage)]
 pub struct Attackable {
     pub current_health: u32,
     pub max_health: u32,
+    pub on_death: Option<fn(Entity, Entity, &mut World)>,
 
     pub has_oozing_buff: bool,
 
@@ -55,21 +56,13 @@ impl Attackable {
         Self {
             current_health: max_health,
             max_health,
+            on_death: None,
 
             has_oozing_buff: false,
 
             oozed_debuff_stacks: 0,
         }
     }
-}
-
-#[derive(Component, Debug, PartialEq, Copy, Clone)]
-#[storage(BTreeStorage)]
-pub enum HealAttackerOnDeath {
-    Full,
-    Amount(u32),
-    MaxPercentage(f32),
-    CurrentPercentage(f32),
 }
 
 #[derive(Component, Copy, Clone)]
@@ -81,16 +74,6 @@ pub struct AI {
 impl AI {
     pub fn new(run: fn(Entity, &mut World)) -> Self {
         Self { run }
-    }
-}
-
-#[derive(Component, Debug, Clone)]
-#[storage(BTreeStorage)]
-pub struct RNG(pub Pcg64);
-
-impl RNG {
-    pub fn new() -> Self {
-        Self(Pcg64::from_entropy())
     }
 }
 
@@ -211,10 +194,30 @@ impl MessageDisplayLength {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct RNG(pub Pcg64);
+
+impl RNG {
+    pub fn new() -> Self {
+        Self(Pcg64::from_entropy())
+    }
+}
+
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
 pub enum Direction {
     Up,
     Down,
     Left,
     Right,
+}
+
+impl Direction {
+    pub fn opposite(&self) -> Self {
+        match self {
+            Direction::Up => Direction::Down,
+            Direction::Down => Direction::Up,
+            Direction::Left => Direction::Right,
+            Direction::Right => Direction::Left,
+        }
+    }
 }
