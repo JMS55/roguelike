@@ -149,9 +149,7 @@ pub fn create_volatile_husk(x: i32, y: i32, world: &mut World) {
                 .collect::<Vec<Entity>>()
         };
         for target in targets {
-            if target != ai_entity {
-                damage(6, false, ai_entity, target, world);
-            }
+            damage(6, false, None, target, world);
         }
         let mut message_log = world.fetch_mut::<MessageLog>();
         message_log.new_message(

@@ -6,23 +6,33 @@ use specs::{Entity, World, WorldExt};
 pub fn damage(
     mut damage: u32,
     is_melee: bool,
-    attacker: Entity,
+    attacker: Option<Entity>,
     target: Entity,
     world: &mut World,
 ) -> (bool, u32) {
     let target_died = {
-        // Can't modify attacker_attackable here. A clone is needed to statisfy the borrow checker.
         let mut attackable_data = world.write_storage::<Attackable>();
-        let attacker_attackable = attackable_data.get(attacker).unwrap().clone();
+
+        {
+            let target_attackable = attackable_data.get(target).unwrap();
+            if target_attackable.current_health == 0 {
+                return (true, 0);
+            }
+        }
+
+        if let Some(attacker) = attacker {
+            let attacker_attackable = attackable_data.get(attacker).unwrap().clone();
+            let mut target_attackable = attackable_data.get_mut(target).unwrap();
+
+            if attacker_attackable.has_oozing_buff {
+                damage += target_attackable.oozed_debuff_stacks;
+                if is_melee {
+                    target_attackable.oozed_debuff_stacks += 1;
+                }
+            }
+        }
+
         let mut target_attackable = attackable_data.get_mut(target).unwrap();
-
-        if attacker_attackable.has_oozing_buff {
-            damage += target_attackable.oozed_debuff_stacks;
-        }
-        if is_melee {
-            target_attackable.oozed_debuff_stacks += 1;
-        }
-
         target_attackable.current_health = target_attackable
             .current_health
             .checked_sub(damage)
@@ -92,7 +102,8 @@ pub fn try_attack(
         };
 
         try_turn(attacker, direction_to_move, world)?;
-        let (target_died, damage_dealt) = damage(base_damage, gap == 1, attacker, target, world);
+        let (target_died, damage_dealt) =
+            damage(base_damage, gap == 1, Some(attacker), target, world);
 
         let mut message_log = world.fetch_mut::<MessageLog>();
         message_log.new_message(

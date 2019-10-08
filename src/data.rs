@@ -44,8 +44,7 @@ impl Sprite {
 pub struct Attackable {
     pub current_health: u32,
     pub max_health: u32,
-    pub on_death: Option<fn(Entity, Entity, &mut World)>,
-
+    pub on_death: Option<fn(Entity, Option<Entity>, &mut World)>,
     pub has_oozing_buff: bool,
 
     pub oozed_debuff_stacks: u32,
@@ -57,7 +56,6 @@ impl Attackable {
             current_health: max_health,
             max_health,
             on_death: None,
-
             has_oozing_buff: false,
 
             oozed_debuff_stacks: 0,
