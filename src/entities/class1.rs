@@ -13,7 +13,7 @@ pub fn create_random_class1(rarity: Rarity, x: i32, y: i32, world: &mut World) {
             Rarity::Common => vec![create_phase_bat, create_danger_spider, create_pungent_ooze],
             Rarity::Uncommon => vec![create_skeleton_scout, create_volatile_husk],
             Rarity::Rare => vec![create_jack_spectre],
-            Rarity::Epic => unimplemented!("No epic monsters exist yet"),
+            Rarity::Epic => vec![create_king_of_lanterns, create_moth_priestess],
         };
         *choices.choose(rng).unwrap()
     };
@@ -289,6 +289,45 @@ pub fn create_jack_spectre(x: i32, y: i32, world: &mut World) {
         .with(Boolean(false))
         .with(Position::new(x, y))
         .with(Attackable::new(7))
+        .with(Sprite::new("green"))
+        .build();
+}
+
+pub fn create_king_of_lanterns(x: i32, y: i32, world: &mut World) {
+    world
+        .create_entity()
+        .with(Name("King of the Lanterns"))
+        .with(AI::new(|ai_entity, world| {
+            // TODO
+        }))
+        .with(Position::new(x, y))
+        .with(Attackable::new(40))
+        .with(Sprite::new("green"))
+        .build();
+}
+
+pub fn create_moth_priestess(x: i32, y: i32, world: &mut World) {
+    world
+        .create_entity()
+        .with(Name("The Moth Priestess"))
+        .with(AI::new(|ai_entity, world| {
+            // TODO
+        }))
+        .with(Position::new(x, y))
+        .with(Attackable::new(47))
+        .with(Sprite::new("green"))
+        .build();
+}
+
+pub fn create_moth_worshipper(x: i32, y: i32, world: &mut World) {
+    world
+        .create_entity()
+        .with(Name("The Moth Priestess"))
+        .with(AI::new(|ai_entity, world| {
+            // TODO
+        }))
+        .with(Position::new(x, y))
+        .with(Attackable::new(12))
         .with(Sprite::new("green"))
         .build();
 }
