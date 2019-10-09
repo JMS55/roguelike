@@ -19,7 +19,7 @@ pub fn create_phase_bat(x: i32, y: i32, world: &mut World) {
                 Ok(false) => {
                     let attack_twice = {
                         let mut rng = world.fetch_mut::<RNG>();
-                        rng.0.gen_ratio(1, 10)
+                        rng.0.gen_ratio(1, 7)
                     };
                     if attack_twice {
                         let _ = try_attack(2, 1, 1, ai_entity, player_entity, world);
@@ -149,7 +149,7 @@ pub fn create_volatile_husk(x: i32, y: i32, world: &mut World) {
                 .collect::<Vec<Entity>>()
         };
         for target in targets {
-            damage(6, false, None, target, world);
+            damage(6, false, Some(ai_entity), target, world);
         }
         let mut message_log = world.fetch_mut::<MessageLog>();
         message_log.new_message(
