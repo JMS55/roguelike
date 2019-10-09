@@ -126,7 +126,7 @@ pub fn can_attack(
     maximum_range: u32,
     attacker: Entity,
     target: Entity,
-    world: &mut World,
+    world: &World,
 ) -> bool {
     let position_data = world.read_storage::<Position>();
     let attacker_position = position_data.get(attacker).unwrap();

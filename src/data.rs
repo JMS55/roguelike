@@ -79,6 +79,10 @@ impl AI {
 
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 #[storage(BTreeStorage)]
+pub struct Boolean(pub bool);
+
+#[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
+#[storage(BTreeStorage)]
 pub struct Intangible {}
 
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
@@ -220,4 +224,12 @@ impl Direction {
             Direction::Right => Direction::Left,
         }
     }
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
+pub enum Rarity {
+    Common,
+    Uncommon,
+    Rare,
+    Epic,
 }

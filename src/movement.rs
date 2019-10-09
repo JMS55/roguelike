@@ -35,10 +35,48 @@ pub fn try_move(entity: Entity, direction: Direction, world: &mut World) -> Resu
     }
 }
 
-pub fn try_turn(entity: Entity, direction: Direction, world: &World) -> Result<(), ()> {
+pub fn can_move(entity: Entity, direction: Direction, world: &World) -> bool {
+    let obstacles;
+    let entity_position;
+    {
+        let position_data = world.read_storage::<Position>();
+        let intangible_data = world.read_storage::<Intangible>();
+        obstacles = (&position_data, !&intangible_data)
+            .join()
+            .map(|(position, _)| (position.x, position.y))
+            .collect::<HashSet<(i32, i32)>>();
+        entity_position = *position_data.get(entity).unwrap();
+    }
+
+    let (new_x, new_y) = match direction {
+        Direction::Up => (entity_position.x, entity_position.y + 1),
+        Direction::Down => (entity_position.x, entity_position.y - 1),
+        Direction::Left => (entity_position.x - 1, entity_position.y),
+        Direction::Right => (entity_position.x + 1, entity_position.y),
+    };
+
+    if !obstacles.contains(&(new_x, new_y)) {
+        if !can_turn(entity, direction, world) {
+            return false;
+        }
+        let mut position_data = world.write_storage::<Position>();
+        let mut entity_position = position_data.get_mut(entity).unwrap();
+        entity_position.x = new_x;
+        entity_position.y = new_y;
+        true
+    } else {
+        false
+    }
+}
+
+pub fn try_turn(entity: Entity, direction: Direction, world: &mut World) -> Result<(), ()> {
     let mut position_data = world.write_storage::<Position>();
     position_data.get_mut(entity).unwrap().facing_direction = direction;
     Ok(())
+}
+
+pub fn can_turn(_: Entity, _: Direction, _: &World) -> bool {
+    true
 }
 
 pub fn pathfind(
