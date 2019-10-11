@@ -205,8 +205,8 @@ pub fn create_jack_spectre(x: i32, y: i32, world: &mut World) {
                 (&entities, &player_data).join().next().unwrap().0
             };
             let mut attacked_this_turn = {
-                let boolean_data = world.read_storage::<Boolean>();
-                boolean_data.get(ai_entity).unwrap().0
+                let ai_counter_data = world.read_storage::<AICounter>();
+                ai_counter_data.get(ai_entity).unwrap().0 == 1
             };
             for _ in 0..2 {
                 if can_attack(1, 1, ai_entity, player_entity, world) {
@@ -283,10 +283,10 @@ pub fn create_jack_spectre(x: i32, y: i32, world: &mut World) {
                     let _ = try_move_towards(ai_entity, player_entity, world);
                 }
             }
-            let mut boolean_data = world.write_storage::<Boolean>();
-            let _ = boolean_data.insert(ai_entity, Boolean(false));
+            let mut ai_counter_data = world.write_storage::<AICounter>();
+            let _ = ai_counter_data.insert(ai_entity, AICounter(0));
         }))
-        .with(Boolean(false))
+        .with(AICounter(0))
         .with(Position::new(x, y))
         .with(Attackable::new(7))
         .with(Sprite::new("green"))
@@ -297,12 +297,33 @@ pub fn create_king_of_lanterns(x: i32, y: i32, world: &mut World) {
     world
         .create_entity()
         .with(Name("King of the Lanterns"))
-        .with(AI::new(|ai_entity, world| {
-            // TODO
-        }))
+        // TODO
+        // .with(AI::new(|ai_entity, world| {}))
         .with(Position::new(x, y))
         .with(Attackable::new(40))
         .with(Sprite::new("green"))
+        .build();
+}
+
+pub fn create_king_of_lanterns_illusion(x: i32, y: i32, world: &mut World) {
+    world
+        .create_entity()
+        .with(Name("King of the Lanterns"))
+        .with(Position::new(x, y))
+        .with(Attackable::new(0))
+        .with(Sprite::new("green"))
+        .build();
+}
+
+pub fn create_king_of_lanterns_flame(x: i32, y: i32, world: &mut World) {
+    world
+        .create_entity()
+        .with(Name("Pillar of Flame"))
+        // TODO
+        // .with(AI::new(|ai_entity, world| {}))
+        .with(Position::new(x, y))
+        .with(Intangible {})
+        .with(Sprite::new("orange"))
         .build();
 }
 
@@ -310,9 +331,8 @@ pub fn create_moth_priestess(x: i32, y: i32, world: &mut World) {
     world
         .create_entity()
         .with(Name("The Moth Priestess"))
-        .with(AI::new(|ai_entity, world| {
-            // TODO
-        }))
+        // TODO
+        // .with(AI::new(|ai_entity, world| {}))
         .with(Position::new(x, y))
         .with(Attackable::new(47))
         .with(Sprite::new("green"))
@@ -322,10 +342,9 @@ pub fn create_moth_priestess(x: i32, y: i32, world: &mut World) {
 pub fn create_moth_worshipper(x: i32, y: i32, world: &mut World) {
     world
         .create_entity()
-        .with(Name("The Moth Priestess"))
-        .with(AI::new(|ai_entity, world| {
-            // TODO
-        }))
+        .with(Name("Moth Worshipper"))
+        // TODO
+        // .with(AI::new(|ai_entity, world| {}))
         .with(Position::new(x, y))
         .with(Attackable::new(12))
         .with(Sprite::new("green"))

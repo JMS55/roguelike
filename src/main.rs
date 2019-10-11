@@ -31,7 +31,7 @@ fn main() {
     world.register::<Sprite>();
     world.register::<Attackable>();
     world.register::<AI>();
-    world.register::<Boolean>();
+    world.register::<AICounter>();
     world.register::<Intangible>();
     world.register::<Player>();
     world.register::<Staircase>();

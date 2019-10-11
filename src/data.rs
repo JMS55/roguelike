@@ -79,7 +79,7 @@ impl AI {
 
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 #[storage(BTreeStorage)]
-pub struct Boolean(pub bool);
+pub struct AICounter(pub u32);
 
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 #[storage(BTreeStorage)]
