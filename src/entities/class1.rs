@@ -62,12 +62,12 @@ pub fn create_danger_spider(x: i32, y: i32, world: &mut World) {
                 let entities = world.entities();
                 (&entities, &player_data).join().next().unwrap().0
             };
-            if try_attack(3, 1, 1, ai_entity, player_entity, world).is_err() {
+            if try_attack(5, 1, 1, ai_entity, player_entity, world).is_err() {
                 let _ = try_move_towards(ai_entity, player_entity, world);
             }
         }))
         .with(Position::new(x, y))
-        .with(Attackable::new(5))
+        .with(Attackable::new(7))
         .with(Sprite::new("green"))
         .build();
 }
