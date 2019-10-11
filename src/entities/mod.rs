@@ -26,6 +26,16 @@ pub fn create_staircase(x: i32, y: i32, world: &mut World) {
         .build();
 }
 
+pub fn create_spawner(x: i32, y: i32, world: &mut World) {
+    world
+        .create_entity()
+        .with(Name("Spawner"))
+        .with(Spawner::new())
+        .with(Position::new(x, y))
+        .with(Intangible {})
+        .build();
+}
+
 pub fn create_wall(x: i32, y: i32, world: &mut World) {
     world
         .create_entity()

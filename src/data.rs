@@ -120,6 +120,16 @@ impl Spawner {
             cooldown_time,
         }
     }
+
+    pub fn tick(&mut self) -> bool {
+        self.time_since_last_spawn += Duration::from_nanos(16700000);
+        if self.time_since_last_spawn >= self.cooldown_time {
+            self.time_since_last_spawn = Duration::from_secs(0);
+            true
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]

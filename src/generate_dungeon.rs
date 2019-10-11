@@ -157,16 +157,31 @@ impl GenerateDungeonSystem {
             entities::create_wall(*x, *y, world);
         }
 
-        if let Some(staircase_room) = rooms.get(1) {
-            let x = self.rng.gen_range(
-                staircase_room.center_x - staircase_room.x_radius as i32 + 1,
-                staircase_room.center_x + staircase_room.x_radius as i32,
-            );
-            let y = self.rng.gen_range(
-                staircase_room.center_y - staircase_room.y_radius as i32 + 1,
-                staircase_room.center_y + staircase_room.y_radius as i32,
-            );
-            entities::create_staircase(x, y, world);
+        let staircase_room = &rooms[1];
+        let staircase_x = self.rng.gen_range(
+            staircase_room.center_x - staircase_room.x_radius as i32 + 1,
+            staircase_room.center_x + staircase_room.x_radius as i32,
+        );
+        let staircase_y = self.rng.gen_range(
+            staircase_room.center_y - staircase_room.y_radius as i32 + 1,
+            staircase_room.center_y + staircase_room.y_radius as i32,
+        );
+        entities::create_staircase(staircase_x, staircase_y, world);
+
+        for room in &rooms {
+            if self.rng.gen_ratio(1, 5) {
+                let x = self.rng.gen_range(
+                    room.center_x - room.x_radius as i32,
+                    room.center_x + room.x_radius as i32 + 1,
+                );
+                let y = self.rng.gen_range(
+                    room.center_y - room.y_radius as i32,
+                    room.center_y + room.y_radius as i32 + 1,
+                );
+                if x != staircase_x && y != staircase_y {
+                    entities::create_spawner(x, y, world);
+                }
+            }
         }
     }
 }

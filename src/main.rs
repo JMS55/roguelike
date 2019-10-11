@@ -7,6 +7,7 @@ mod generate_dungeon;
 mod movement;
 mod player_controller;
 mod render;
+mod spawn;
 
 use data::*;
 use drain_crystals::drain_crystals_system;
@@ -16,6 +17,7 @@ use player_controller::{PlayerActed, PlayerAction, PlayerControllerSystem};
 use render::RenderSystem;
 use sdl2::event::Event;
 use sdl2::keyboard::{Mod, Scancode};
+use spawn::tick_spawners;
 use specs::{World, WorldExt};
 use std::time::{Duration, Instant};
 
@@ -123,6 +125,7 @@ fn main() {
                     world.insert(RNG::new());
                     entities::create_player(&mut world);
                     generate_dungeon_system.run(&mut world);
+                    tick_spawners(&mut world);
                 }
                 GameState::PlayerTurn => {
                     if player_controller_system.run(&mut generate_dungeon_system, &mut world)
@@ -132,6 +135,7 @@ fn main() {
                     }
                 }
                 GameState::EnemyTurn => {
+                    tick_spawners(&mut world);
                     enemy_controller_system(&mut world);
                     world.insert(GameState::PlayerTurn);
                 }
