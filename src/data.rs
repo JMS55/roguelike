@@ -108,23 +108,23 @@ pub struct Staircase {}
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 #[storage(BTreeStorage)]
 pub struct Spawner {
-    time_since_last_spawn: Duration,
-    cooldown_time: Duration,
+    turns_since_last_spawn: u32,
+    turns_per_spawn: u32,
 }
 
 impl Spawner {
     pub fn new() -> Self {
-        let cooldown_time = Duration::from_secs(20);
+        let turns_per_spawn = 30;
         Self {
-            time_since_last_spawn: cooldown_time,
-            cooldown_time,
+            turns_since_last_spawn: turns_per_spawn,
+            turns_per_spawn,
         }
     }
 
     pub fn tick(&mut self) -> bool {
-        self.time_since_last_spawn += Duration::from_nanos(16700000);
-        if self.time_since_last_spawn >= self.cooldown_time {
-            self.time_since_last_spawn = Duration::from_secs(0);
+        self.turns_since_last_spawn += 1;
+        if self.turns_since_last_spawn >= self.turns_per_spawn {
+            self.turns_since_last_spawn = 0;
             true
         } else {
             false

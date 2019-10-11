@@ -169,7 +169,7 @@ impl GenerateDungeonSystem {
         entities::create_staircase(staircase_x, staircase_y, world);
 
         for room in &rooms {
-            if self.rng.gen_ratio(1, 5) {
+            if self.rng.gen_ratio(1, 4) {
                 let x = self.rng.gen_range(
                     room.center_x - room.x_radius as i32,
                     room.center_x + room.x_radius as i32 + 1,
