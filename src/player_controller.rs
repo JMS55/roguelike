@@ -1,4 +1,4 @@
-use crate::data::{Direction, GameState, Player, Position, Staircase};
+use crate::data::{Attackable, Direction, GameState, Player, Position, Staircase};
 use crate::generate_dungeon::GenerateDungeonSystem;
 use crate::movement;
 use specs::{Join, World, WorldExt};
@@ -44,6 +44,18 @@ impl PlayerControllerSystem {
                         .any(|(position, _)| position.x == new_x && position.y == new_y)
                 };
                 if is_facing_staircase {
+                    {
+                        let mut attackable_data = world.write_storage::<Attackable>();
+                        let player_attackable = attackable_data.get_mut(player_entity).unwrap();
+
+                        player_attackable.current_health +=
+                            (player_attackable.max_health as f32 * 0.2).round() as u32;
+                        if player_attackable.current_health > player_attackable.max_health {
+                            player_attackable.current_health = player_attackable.max_health;
+                        }
+
+                        player_attackable.oozed_debuff_stacks = 0;
+                    }
                     generate_dungeon_system.run(world);
                 }
                 is_facing_staircase
