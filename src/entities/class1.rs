@@ -266,7 +266,7 @@ pub fn create_jack_spectre(x: i32, y: i32, world: &mut World) {
                                     Direction::Right => (ai_position.x + 1, ai_position.y),
                                 };
                                 if !obstacles.contains(&(spawn_position_x, spawn_position_y)) {
-                                    let _ = create_random_class1(
+                                    create_random_class1(
                                         Rarity::Common,
                                         spawn_position_x,
                                         spawn_position_y,

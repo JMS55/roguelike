@@ -199,7 +199,7 @@ pub enum MessageDisplayLength {
 }
 
 impl MessageDisplayLength {
-    pub fn duration(&self) -> Duration {
+    pub fn duration(self) -> Duration {
         Duration::from_secs(match self {
             MessageDisplayLength::Short => 3,
             MessageDisplayLength::Medium => 4,
@@ -226,7 +226,7 @@ pub enum Direction {
 }
 
 impl Direction {
-    pub fn opposite(&self) -> Self {
+    pub fn opposite(self) -> Self {
         match self {
             Direction::Up => Direction::Down,
             Direction::Down => Direction::Up,

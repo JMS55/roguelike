@@ -69,8 +69,8 @@ pub fn try_attack(
         let (attacker_name, target_name) = {
             let name_data = world.read_storage::<Name>();
             (
-                name_data.get(attacker).unwrap().clone(),
-                name_data.get(target).unwrap().clone(),
+                *name_data.get(attacker).unwrap(),
+                *name_data.get(target).unwrap(),
             )
         };
 
