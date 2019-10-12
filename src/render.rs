@@ -54,6 +54,10 @@ impl RenderSystem {
                         8 * 4,
                         8 * 4,
                     );
+                    let texture = texture_creator
+                        .load_texture(format!("assets/{}.png", entity_sprite.id))
+                        .unwrap();
+                    self.canvas.copy(&texture, None, dest_rect).unwrap();
                     if player_data.get(entity).is_some() {
                         let texture = texture_creator
                             .load_texture("assets/direction_indicator.png")
@@ -68,10 +72,6 @@ impl RenderSystem {
                             .copy_ex(&texture, None, dest_rect, rotation, None, false, false)
                             .unwrap();
                     }
-                    let texture = texture_creator
-                        .load_texture(format!("assets/{}.png", entity_sprite.id))
-                        .unwrap();
-                    self.canvas.copy(&texture, None, dest_rect).unwrap();
                 }
             }
 
