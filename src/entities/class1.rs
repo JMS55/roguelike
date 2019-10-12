@@ -49,7 +49,7 @@ pub fn create_phase_bat(x: i32, y: i32, world: &mut World) {
         }))
         .with(Position::new(x, y))
         .with(Attackable::new(6))
-        .with(Sprite::new("green"))
+        .with(Sprite::new("phase_bat"))
         .build();
 }
 
@@ -69,7 +69,7 @@ pub fn create_danger_spider(x: i32, y: i32, world: &mut World) {
         }))
         .with(Position::new(x, y))
         .with(Attackable::new(7))
-        .with(Sprite::new("green"))
+        .with(Sprite::new("danger_spider"))
         .build();
 }
 
@@ -91,7 +91,7 @@ pub fn create_pungent_ooze(x: i32, y: i32, world: &mut World) {
         }))
         .with(Position::new(x, y))
         .with(attackable)
-        .with(Sprite::new("green"))
+        .with(Sprite::new("pungent_ooze"))
         .build();
 }
 
@@ -142,7 +142,7 @@ pub fn create_skeleton_scout(x: i32, y: i32, world: &mut World) {
         }))
         .with(Position::new(x, y))
         .with(Attackable::new(9))
-        .with(Sprite::new("green"))
+        .with(Sprite::new("skeleton_scout"))
         .build();
 }
 
@@ -191,7 +191,7 @@ pub fn create_volatile_husk(x: i32, y: i32, world: &mut World) {
         }))
         .with(Position::new(x, y))
         .with(attackable)
-        .with(Sprite::new("green"))
+        .with(Sprite::new("volatile_husk"))
         .build();
 }
 
@@ -290,7 +290,7 @@ pub fn create_jack_spectre(x: i32, y: i32, world: &mut World) {
         .with(AICounter(0))
         .with(Position::new(x, y))
         .with(Attackable::new(7))
-        .with(Sprite::new("green"))
+        .with(Sprite::new("jack_spectre"))
         .build();
 }
 
@@ -304,7 +304,7 @@ pub fn create_king_of_lanterns(x: i32, y: i32, world: &mut World) {
         // .with(AI::new(|ai_entity, world| {}))
         .with(Position::new(x, y)) // TODO: generate staircase on death
         .with(attackable)
-        .with(Sprite::new("green"))
+        .with(Sprite::new("placeholder"))
         .build();
 }
 
@@ -314,7 +314,7 @@ pub fn create_king_of_lanterns_illusion(x: i32, y: i32, world: &mut World) {
         .with(Name("King of the Lanterns"))
         .with(Position::new(x, y))
         .with(Attackable::new(1))
-        .with(Sprite::new("green"))
+        .with(Sprite::new("placeholder"))
         .build();
 }
 
@@ -340,7 +340,7 @@ pub fn create_moth_priestess(x: i32, y: i32, world: &mut World) {
         // .with(AI::new(|ai_entity, world| {}))
         .with(Position::new(x, y))
         .with(attackable)
-        .with(Sprite::new("green"))
+        .with(Sprite::new("placeholder"))
         .build();
 }
 
@@ -352,7 +352,7 @@ pub fn create_moth_worshipper(x: i32, y: i32, world: &mut World) {
         // .with(AI::new(|ai_entity, world| {}))
         .with(Position::new(x, y))
         .with(Attackable::new(12))
-        .with(Sprite::new("green"))
+        .with(Sprite::new("placeholder"))
         .build();
 }
 

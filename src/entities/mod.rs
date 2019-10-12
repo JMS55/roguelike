@@ -12,7 +12,7 @@ pub fn create_player(world: &mut World) {
         .with(Player::new())
         .with(Position::new(0, 0))
         .with(Attackable::new(20))
-        .with(Sprite::new("red"))
+        .with(Sprite::new("player"))
         .build();
 }
 
@@ -22,7 +22,7 @@ pub fn create_staircase(x: i32, y: i32, world: &mut World) {
         .with(Name("Staircase"))
         .with(Staircase {})
         .with(Position::new(x, y))
-        .with(Sprite::new("pink"))
+        .with(Sprite::new("staircase"))
         .build();
 }
 
@@ -41,7 +41,7 @@ pub fn create_wall(x: i32, y: i32, world: &mut World) {
         .create_entity()
         .with(Name("Wall"))
         .with(Position::new(x, y))
-        .with(Sprite::new("blue"))
+        .with(Sprite::new("wall"))
         .build();
 }
 
