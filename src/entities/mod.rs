@@ -3,6 +3,8 @@ mod class1;
 pub use class1::*;
 
 use crate::data::*;
+use rand::Rng;
+use rand_pcg::Pcg64;
 use specs::{Builder, Entity, World, WorldExt};
 
 pub fn create_player(world: &mut World) {
@@ -36,12 +38,16 @@ pub fn create_spawner(x: i32, y: i32, world: &mut World) {
         .build();
 }
 
-pub fn create_wall(x: i32, y: i32, world: &mut World) {
+pub fn create_wall(x: i32, y: i32, world: &mut World, rng: &mut Pcg64) {
+    let mut sprite = "wall";
+    if rng.gen_ratio(1, 4) {
+        sprite = "wall_mossy";
+    }
     world
         .create_entity()
         .with(Name("Wall"))
         .with(Position::new(x, y))
-        .with(Sprite::new("wall"))
+        .with(Sprite::new(sprite))
         .build();
 }
 

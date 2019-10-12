@@ -153,7 +153,7 @@ impl GenerateDungeonSystem {
                 .cloned()
                 .collect::<HashSet<(i32, i32)>>();
             for (x, y) in &wall_positions {
-                entities::create_wall(*x, *y, world);
+                entities::create_wall(*x, *y, world, &mut self.rng);
             }
 
             let staircase_room = &rooms[1];
@@ -216,11 +216,11 @@ impl GenerateDungeonSystem {
                 (2, -6),
                 (1, -6),
             ];
-            entities::create_wall(0, 10, world);
-            entities::create_wall(0, -6, world);
+            entities::create_wall(0, 10, world, &mut self.rng);
+            entities::create_wall(0, -6, world, &mut self.rng);
             for (wall_x, wall_y) in &semicircle_positions {
-                entities::create_wall(*wall_x, *wall_y, world);
-                entities::create_wall(-*wall_x, *wall_y, world);
+                entities::create_wall(*wall_x, *wall_y, world, &mut self.rng);
+                entities::create_wall(-*wall_x, *wall_y, world, &mut self.rng);
             }
 
             entities::create_random_class1(Rarity::Epic, 0, 4, world);
