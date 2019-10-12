@@ -32,8 +32,8 @@ pub fn tick_spawners(world: &mut World) {
                 let rng = &mut world.fetch_mut::<RNG>().0;
                 [
                     (Rarity::Common, 70),
-                    (Rarity::Uncommon, 20),
-                    (Rarity::Rare, 10),
+                    (Rarity::Uncommon, 25),
+                    (Rarity::Rare, 5),
                 ]
                 .choose_weighted(rng, |r| r.1)
                 .unwrap()
