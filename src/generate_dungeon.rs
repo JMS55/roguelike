@@ -15,7 +15,7 @@ impl GenerateDungeonSystem {
     pub fn new() -> Self {
         let mut rng = Pcg64::from_entropy();
         Self {
-            next_floor: 2,
+            next_floor: 1,
             next_boss_floor: rng.gen_range(8, 11),
             rng,
         }
