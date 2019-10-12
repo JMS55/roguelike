@@ -1,6 +1,6 @@
 use crate::data::{Attackable, Direction, GameState, Player, Position, Staircase};
 use crate::generate_dungeon::GenerateDungeonSystem;
-use crate::movement;
+use crate::movement::{try_move, try_turn};
 use specs::{Join, World, WorldExt};
 
 pub struct PlayerControllerSystem {
@@ -27,7 +27,10 @@ impl PlayerControllerSystem {
 
         let player_acted = match self.action {
             PlayerAction::None => false,
-            PlayerAction::Pass => true,
+            PlayerAction::Pass => {
+                self.action = PlayerAction::None;
+                true
+            }
             PlayerAction::Interact => {
                 let is_facing_staircase = {
                     let position_data = world.read_storage::<Position>();
@@ -58,14 +61,22 @@ impl PlayerControllerSystem {
                     }
                     generate_dungeon_system.run(world);
                 }
+                self.action = PlayerAction::None;
                 is_facing_staircase
             }
             PlayerAction::Turn(direction) => {
-                let _ = movement::try_turn(player_entity, direction, world);
+                let _ = try_turn(player_entity, direction, world);
+                self.action = PlayerAction::None;
                 false
             }
             PlayerAction::Move(direction) => {
-                movement::try_move(player_entity, direction, world).is_ok()
+                if try_move(player_entity, direction, world).is_ok() {
+                    self.action = PlayerAction::None;
+                    true
+                } else {
+                    self.action = PlayerAction::Turn(direction);
+                    false
+                }
             }
         };
 
@@ -76,8 +87,6 @@ impl PlayerControllerSystem {
             }
             world.insert(GameState::EnemyTurn);
         }
-
-        self.action = PlayerAction::None;
         PlayerActed(player_acted)
     }
 }
