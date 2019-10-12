@@ -1,4 +1,4 @@
-use crate::data::{GameState, MessageColor, MessageLog, Player, Position, Sprite};
+use crate::data::{Direction, GameState, MessageColor, MessageLog, Player, Position, Sprite};
 use sdl2::image::LoadTexture;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
@@ -31,6 +31,7 @@ impl RenderSystem {
         self.canvas.clear();
         let texture_creator = self.canvas.texture_creator();
 
+        let entities = world.entities();
         let player_data = world.read_storage::<Player>();
         let position_data = world.read_storage::<Position>();
         let sprite_data = world.read_storage::<Sprite>();
@@ -39,21 +40,37 @@ impl RenderSystem {
         let game_state = *world.fetch::<GameState>();
         if game_state == GameState::PlayerTurn || game_state == GameState::EnemyTurn {
             let player_position = (&player_data, &position_data).join().next().unwrap().1;
-            for (entity_position, entity_sprite) in (&position_data, &sprite_data).join() {
+            for (entity, entity_position, entity_sprite) in
+                (&entities, &position_data, &sprite_data).join()
+            {
                 let adjusted_entity_position_x = entity_position.x - player_position.x + 7;
                 let adjusted_entity_position_y = player_position.y - entity_position.y + 7;
                 if (0..15).contains(&adjusted_entity_position_x)
                     && (0..15).contains(&adjusted_entity_position_y)
                 {
-                    let texture = texture_creator
-                        .load_texture(format!("assets/{}.png", entity_sprite.id))
-                        .unwrap();
                     let dest_rect = Rect::new(
                         adjusted_entity_position_x * 8 * 4,
                         adjusted_entity_position_y * 8 * 4,
                         8 * 4,
                         8 * 4,
                     );
+                    if player_data.get(entity).is_some() {
+                        let texture = texture_creator
+                            .load_texture("assets/direction_indicator.png")
+                            .unwrap();
+                        let rotation = match entity_position.facing_direction {
+                            Direction::Up => 90.0,
+                            Direction::Down => 270.0,
+                            Direction::Left => 0.0,
+                            Direction::Right => 180.0,
+                        };
+                        self.canvas
+                            .copy_ex(&texture, None, dest_rect, rotation, None, false, false)
+                            .unwrap();
+                    }
+                    let texture = texture_creator
+                        .load_texture(format!("assets/{}.png", entity_sprite.id))
+                        .unwrap();
                     self.canvas.copy(&texture, None, dest_rect).unwrap();
                 }
             }

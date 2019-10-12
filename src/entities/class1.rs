@@ -326,7 +326,7 @@ pub fn create_king_of_lanterns_flame(x: i32, y: i32, world: &mut World) {
         // .with(AI::new(|ai_entity, world| {}))
         .with(Position::new(x, y))
         .with(Intangible {})
-        .with(Sprite::new("orange"))
+        .with(Sprite::new("placeholder"))
         .build();
 }
 
