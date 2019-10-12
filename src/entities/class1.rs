@@ -1,3 +1,4 @@
+use super::replace_with_staircase_on_death;
 use crate::attack::*;
 use crate::data::*;
 use crate::movement::*;
@@ -294,13 +295,15 @@ pub fn create_jack_spectre(x: i32, y: i32, world: &mut World) {
 }
 
 pub fn create_king_of_lanterns(x: i32, y: i32, world: &mut World) {
+    let mut attackable = Attackable::new(47);
+    attackable.on_death = Some(replace_with_staircase_on_death);
     world
         .create_entity()
         .with(Name("King of the Lanterns"))
         // TODO
         // .with(AI::new(|ai_entity, world| {}))
-        .with(Position::new(x, y))
-        .with(Attackable::new(40))
+        .with(Position::new(x, y)) // TODO: generate staircase on death
+        .with(attackable)
         .with(Sprite::new("green"))
         .build();
 }
@@ -310,7 +313,7 @@ pub fn create_king_of_lanterns_illusion(x: i32, y: i32, world: &mut World) {
         .create_entity()
         .with(Name("King of the Lanterns"))
         .with(Position::new(x, y))
-        .with(Attackable::new(0))
+        .with(Attackable::new(1))
         .with(Sprite::new("green"))
         .build();
 }
@@ -328,13 +331,15 @@ pub fn create_king_of_lanterns_flame(x: i32, y: i32, world: &mut World) {
 }
 
 pub fn create_moth_priestess(x: i32, y: i32, world: &mut World) {
+    let mut attackable = Attackable::new(47);
+    attackable.on_death = Some(replace_with_staircase_on_death);
     world
         .create_entity()
         .with(Name("The Moth Priestess"))
         // TODO
         // .with(AI::new(|ai_entity, world| {}))
         .with(Position::new(x, y))
-        .with(Attackable::new(47))
+        .with(attackable)
         .with(Sprite::new("green"))
         .build();
 }

@@ -3,7 +3,7 @@ mod class1;
 pub use class1::*;
 
 use crate::data::*;
-use specs::{Builder, World, WorldExt};
+use specs::{Builder, Entity, World, WorldExt};
 
 pub fn create_player(world: &mut World) {
     world
@@ -43,4 +43,12 @@ pub fn create_wall(x: i32, y: i32, world: &mut World) {
         .with(Position::new(x, y))
         .with(Sprite::new("blue"))
         .build();
+}
+
+fn replace_with_staircase_on_death(ai_entity: Entity, _: Option<Entity>, world: &mut World) {
+    let ai_position = {
+        let position_data = world.read_storage::<Position>();
+        *position_data.get(ai_entity).unwrap()
+    };
+    create_staircase(ai_position.x, ai_position.y, world);
 }
