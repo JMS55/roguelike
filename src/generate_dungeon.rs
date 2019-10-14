@@ -236,6 +236,32 @@ impl GenerateDungeonSystem {
                 entities::create_wall(-*wall_x, *wall_y, world, &mut self.rng);
             }
 
+            for floor_y in -5..=9 {
+                entities::create_floor(-1, floor_y, world);
+                entities::create_floor(-2, floor_y, world);
+                entities::create_floor(0, floor_y, world);
+                entities::create_floor(1, floor_y, world);
+                entities::create_floor(2, floor_y, world);
+            }
+            for floor_y in -4..=8 {
+                entities::create_floor(-3, floor_y, world);
+                entities::create_floor(-4, floor_y, world);
+                entities::create_floor(3, floor_y, world);
+                entities::create_floor(4, floor_y, world);
+            }
+            for floor_y in -3..=7 {
+                entities::create_floor(-5, floor_y, world);
+                entities::create_floor(5, floor_y, world);
+            }
+            for floor_y in -2..=6 {
+                entities::create_floor(-6, floor_y, world);
+                entities::create_floor(6, floor_y, world);
+            }
+            for floor_y in 0..=4 {
+                entities::create_floor(-7, floor_y, world);
+                entities::create_floor(7, floor_y, world);
+            }
+
             entities::create_random_class1(Rarity::Epic, 0, 4, world);
 
             self.next_boss_floor = self.rng.gen_range(8, 11) + self.next_floor;

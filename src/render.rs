@@ -47,8 +47,7 @@ impl RenderSystem {
 
         let game_state = *world.fetch::<GameState>();
         if game_state == GameState::PlayerTurn || game_state == GameState::EnemyTurn {
-            #[cfg(not(debug_assertions))]
-            {
+            if !cfg!(debug_assertions) {
                 let player_attackable = (&player_data, &attackable_data).join().next().unwrap().1;
                 let player_health_percentage =
                     player_attackable.current_health as f64 / player_attackable.max_health as f64;
