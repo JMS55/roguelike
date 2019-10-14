@@ -51,6 +51,19 @@ pub fn create_wall(x: i32, y: i32, world: &mut World, rng: &mut Pcg64) {
         .build();
 }
 
+pub fn create_floor(x: i32, y: i32, world: &mut World) {
+    world
+        .create_entity()
+        .with(Name("Floor"))
+        .with(Position::new(x, y))
+        .with(Intangible {})
+        .with(Sprite {
+            id: "floor",
+            in_foreground: false,
+        })
+        .build();
+}
+
 fn replace_with_staircase_on_death(ai_entity: Entity, _: Option<Entity>, world: &mut World) {
     let ai_position = {
         let position_data = world.read_storage::<Position>();

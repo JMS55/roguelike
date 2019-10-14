@@ -31,11 +31,15 @@ impl Position {
 #[storage(BTreeStorage)]
 pub struct Sprite {
     pub id: &'static str,
+    pub in_foreground: bool,
 }
 
 impl Sprite {
     pub fn new(id: &'static str) -> Self {
-        Self { id }
+        Self {
+            id,
+            in_foreground: true,
+        }
     }
 }
 

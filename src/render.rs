@@ -39,10 +39,12 @@ impl RenderSystem {
 
         let game_state = *world.fetch::<GameState>();
         if game_state == GameState::PlayerTurn || game_state == GameState::EnemyTurn {
+            let mut render_objects = (&entities, &position_data, &sprite_data)
+                .join()
+                .collect::<Vec<_>>();
+            render_objects.sort_unstable_by_key(|(_, _, sprite)| sprite.in_foreground);
             let player_position = (&player_data, &position_data).join().next().unwrap().1;
-            for (entity, entity_position, entity_sprite) in
-                (&entities, &position_data, &sprite_data).join()
-            {
+            for (entity, entity_position, entity_sprite) in render_objects {
                 let adjusted_entity_position_x = entity_position.x - player_position.x + 7;
                 let adjusted_entity_position_y = player_position.y - entity_position.y + 7;
                 if (0..15).contains(&adjusted_entity_position_x)

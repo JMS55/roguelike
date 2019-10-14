@@ -112,6 +112,19 @@ impl GenerateDungeonSystem {
                 }
             }
 
+            for room in &rooms {
+                let x_radius = room.x_radius as i32;
+                let y_radius = room.y_radius as i32;
+                for x in -x_radius..=x_radius {
+                    for y in -y_radius..=y_radius {
+                        entities::create_floor(room.center_x + x, room.center_y + y, world);
+                    }
+                }
+            }
+            for (corridor_x, corridor_y) in &corridor_positions {
+                entities::create_floor(*corridor_x, *corridor_y, world);
+            }
+
             let mut room_wall_positions = HashSet::with_capacity(rooms.len() * 36);
             for room in &rooms {
                 let x_radius = room.x_radius as i32;
