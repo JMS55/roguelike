@@ -2,9 +2,8 @@ use crate::data::{
     Attackable, Direction, GameState, MessageColor, MessageLog, Player, Position, Sprite,
 };
 use noise::{NoiseFn, OpenSimplex};
-use sdl2::gfx::primitives::DrawRenderer;
 use sdl2::image::LoadTexture;
-use sdl2::pixels::Color;
+use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::rect::Rect;
 use sdl2::render::{BlendMode, WindowCanvas};
 use sdl2::ttf::Sdl2TtfContext;
@@ -17,6 +16,7 @@ pub struct RenderSystem {
     ttf_context: Sdl2TtfContext,
     noise: OpenSimplex,
     timer: Instant,
+    previous_noise_modifier: (f64, f64, f64),
 }
 
 impl RenderSystem {
@@ -30,6 +30,7 @@ impl RenderSystem {
             ttf_context,
             noise: OpenSimplex::new(),
             timer: Instant::now(),
+            previous_noise_modifier: (1.0, 1.0, 1.0),
         }
     }
 
@@ -46,24 +47,39 @@ impl RenderSystem {
 
         let game_state = *world.fetch::<GameState>();
         if game_state == GameState::PlayerTurn || game_state == GameState::EnemyTurn {
-            let player_attackable = (&player_data, &attackable_data).join().next().unwrap().1;
-            let player_has_low_health = player_attackable.current_health as f64
-                / player_attackable.max_health as f64
-                <= 0.3;
-            for x in 0..480 {
-                for y in 0..480 {
-                    let mut t = self.timer.elapsed().as_secs_f64();
-                    if player_has_low_health {
-                        t *= 2.5;
-                    }
-                    let n = self.noise.get([x as f64 / 256.0, y as f64 / 256.0, t]);
-                    let n = ((n + 1.0) * 32.0) as u8;
-                    if player_has_low_health {
-                        self.canvas.pixel(x, y, Color::RGB(n * 2, 0, 0)).unwrap();
-                    } else {
-                        self.canvas.pixel(x, y, Color::RGB(n, n, n)).unwrap();
+            #[cfg(not(debug_assertions))]
+            {
+                let player_attackable = (&player_data, &attackable_data).join().next().unwrap().1;
+                let player_health_percentage =
+                    player_attackable.current_health as f64 / player_attackable.max_health as f64;
+                let mut t = self.timer.elapsed().as_secs_f64();
+                let mut modifier = (1.0, 1.0, 1.0);
+                if player_health_percentage <= 0.3 {
+                    t *= 2.5;
+                    modifier = (2.0, 0.0, 0.0);
+                }
+                modifier.0 =
+                    (modifier.0 as f64 * 0.05) + (self.previous_noise_modifier.0 as f64 * 0.95);
+                modifier.1 =
+                    (modifier.1 as f64 * 0.05) + (self.previous_noise_modifier.1 as f64 * 0.95);
+                modifier.2 =
+                    (modifier.2 as f64 * 0.05) + (self.previous_noise_modifier.2 as f64 * 0.95);
+                self.previous_noise_modifier = modifier;
+                let mut pixel_data: [u8; 480 * 480 * 3] = [0; 480 * 480 * 3];
+                for x in 0..480 {
+                    for y in 0..480 {
+                        let mut n = self.noise.get([x as f64 / 256.0, y as f64 / 256.0, t]);
+                        n = (n + 1.0) * 32.0;
+                        pixel_data[3 * (y * 480 + x)] = (n * modifier.0).round() as u8;
+                        pixel_data[3 * (y * 480 + x) + 1] = (n * modifier.1).round() as u8;
+                        pixel_data[3 * (y * 480 + x) + 2] = (n * modifier.2).round() as u8;
                     }
                 }
+                let mut texture = texture_creator
+                    .create_texture_static(PixelFormatEnum::RGB24, 480, 480)
+                    .unwrap();
+                texture.update(None, &pixel_data, 480 * 3).unwrap();
+                self.canvas.copy(&texture, None, None).unwrap();
             }
 
             let mut render_objects = (&entities, &position_data, &sprite_data)
