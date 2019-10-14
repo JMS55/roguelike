@@ -52,7 +52,7 @@ impl PlayerControllerSystem {
                         let player_attackable = attackable_data.get_mut(player_entity).unwrap();
 
                         player_attackable.current_health +=
-                            (player_attackable.max_health as f32 * 0.2).round() as u32;
+                            (player_attackable.max_health as f64 * 0.2).round() as u32;
                         if player_attackable.current_health > player_attackable.max_health {
                             player_attackable.current_health = player_attackable.max_health;
                         }

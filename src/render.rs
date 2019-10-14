@@ -1,4 +1,8 @@
-use crate::data::{Direction, GameState, MessageColor, MessageLog, Player, Position, Sprite};
+use crate::data::{
+    Attackable, Direction, GameState, MessageColor, MessageLog, Player, Position, Sprite,
+};
+use noise::{NoiseFn, OpenSimplex};
+use sdl2::gfx::primitives::DrawRenderer;
 use sdl2::image::LoadTexture;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
@@ -6,24 +10,26 @@ use sdl2::render::{BlendMode, WindowCanvas};
 use sdl2::ttf::Sdl2TtfContext;
 use sdl2::Sdl;
 use specs::{Join, World, WorldExt};
+use std::time::Instant;
 
 pub struct RenderSystem {
     canvas: WindowCanvas,
     ttf_context: Sdl2TtfContext,
+    noise: OpenSimplex,
+    timer: Instant,
 }
 
 impl RenderSystem {
     pub fn new(sdl_context: &Sdl) -> Self {
         let video_context = sdl_context.video().unwrap();
         let ttf_context = sdl2::ttf::init().unwrap();
-        let window = video_context
-            .window("roguelike", 15 * 8 * 4, 15 * 8 * 4)
-            .build()
-            .unwrap();
+        let window = video_context.window("roguelike", 480, 480).build().unwrap();
         let canvas = window.into_canvas().present_vsync().build().unwrap();
         Self {
             canvas,
             ttf_context,
+            noise: OpenSimplex::new(),
+            timer: Instant::now(),
         }
     }
 
@@ -35,10 +41,31 @@ impl RenderSystem {
         let player_data = world.read_storage::<Player>();
         let position_data = world.read_storage::<Position>();
         let sprite_data = world.read_storage::<Sprite>();
+        let attackable_data = world.read_storage::<Attackable>();
         let mut message_log = world.fetch_mut::<MessageLog>();
 
         let game_state = *world.fetch::<GameState>();
         if game_state == GameState::PlayerTurn || game_state == GameState::EnemyTurn {
+            let player_attackable = (&player_data, &attackable_data).join().next().unwrap().1;
+            let player_has_low_health = player_attackable.current_health as f64
+                / player_attackable.max_health as f64
+                <= 0.3;
+            for x in 0..480 {
+                for y in 0..480 {
+                    let mut t = self.timer.elapsed().as_secs_f64();
+                    if player_has_low_health {
+                        t *= 2.5;
+                    }
+                    let n = self.noise.get([x as f64 / 256.0, y as f64 / 256.0, t]);
+                    let n = ((n + 1.0) * 32.0) as u8;
+                    if player_has_low_health {
+                        self.canvas.pixel(x, y, Color::RGB(n * 2, 0, 0)).unwrap();
+                    } else {
+                        self.canvas.pixel(x, y, Color::RGB(n, n, n)).unwrap();
+                    }
+                }
+            }
+
             let mut render_objects = (&entities, &position_data, &sprite_data)
                 .join()
                 .collect::<Vec<_>>();
@@ -51,10 +78,10 @@ impl RenderSystem {
                     && (0..15).contains(&adjusted_entity_position_y)
                 {
                     let dest_rect = Rect::new(
-                        adjusted_entity_position_x * 8 * 4,
-                        adjusted_entity_position_y * 8 * 4,
-                        8 * 4,
-                        8 * 4,
+                        adjusted_entity_position_x * 32,
+                        adjusted_entity_position_y * 32,
+                        32,
+                        32,
                     );
                     let texture = texture_creator
                         .load_texture(format!("assets/{}.png", entity_sprite.id))
@@ -85,22 +112,22 @@ impl RenderSystem {
             for (index, message) in message_log.recent_messages().enumerate() {
                 let mut alpha = 255;
                 let time_since_message_creation = message.time_created.elapsed();
-                let fade_time = message.display_length.duration().div_f32(2.0);
+                let fade_time = message.display_length.duration().div_f64(2.0);
                 if time_since_message_creation > fade_time {
-                    let t = (time_since_message_creation - fade_time).div_duration_f32(fade_time);
+                    let t = (time_since_message_creation - fade_time).div_duration_f64(fade_time);
                     alpha = (255.0 - (t * 255.0)).round() as u8;
                     alpha = alpha.max(1); // For some reason SDL2 seems to draw at full opacity if alpha = 0
                 }
                 let surface = font
                     .render(&format!("* {}", message.text))
-                    .blended_wrapped(message.color.sdl_color(alpha), 15 * 8 * 4 - 4)
+                    .blended_wrapped(message.color.sdl_color(alpha), 476)
                     .unwrap();
                 let texture = texture_creator
                     .create_texture_from_surface(&surface)
                     .unwrap();
                 let texture_info = texture.query();
                 height_used += texture_info.height + if index == 0 { 4 } else { 0 };
-                if height_used < 15 * 8 * 4 {
+                if height_used < 480 {
                     let dest_rect = Rect::new(
                         4,
                         (height_used - texture_info.height) as i32,
