@@ -114,7 +114,8 @@ impl RenderSystem {
                 let time_since_message_creation = message.time_created.elapsed();
                 let fade_time = message.display_length.duration().div_f64(2.0);
                 if time_since_message_creation > fade_time {
-                    let t = (time_since_message_creation - fade_time).div_duration_f64(fade_time);
+                    let t = (time_since_message_creation - fade_time).as_secs_f64()
+                        / fade_time.as_secs_f64();
                     alpha = (255.0 - (t * 255.0)).round() as u8;
                     alpha = alpha.max(1); // For some reason SDL2 seems to draw at full opacity if alpha = 0
                 }
