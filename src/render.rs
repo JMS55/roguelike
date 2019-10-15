@@ -16,6 +16,7 @@ pub struct RenderSystem {
     ttf_context: Sdl2TtfContext,
     noise: OpenSimplex,
     timer: Instant,
+    previous_noise_t: f64,
     previous_noise_modifier: (f64, f64, f64),
 }
 
@@ -30,6 +31,7 @@ impl RenderSystem {
             ttf_context,
             noise: OpenSimplex::new(),
             timer: Instant::now(),
+            previous_noise_t: 0.0,
             previous_noise_modifier: (1.0, 1.0, 1.0),
         }
     }
@@ -57,12 +59,11 @@ impl RenderSystem {
                     t *= 2.5;
                     modifier = (2.0, 0.0, 0.0);
                 }
-                modifier.0 =
-                    (modifier.0 as f64 * 0.05) + (self.previous_noise_modifier.0 as f64 * 0.95);
-                modifier.1 =
-                    (modifier.1 as f64 * 0.05) + (self.previous_noise_modifier.1 as f64 * 0.95);
-                modifier.2 =
-                    (modifier.2 as f64 * 0.05) + (self.previous_noise_modifier.2 as f64 * 0.95);
+                t = (t * 0.02) + (self.previous_noise_t * 0.98);
+                modifier.0 = (modifier.0 * 0.05) + (self.previous_noise_modifier.0 * 0.95);
+                modifier.1 = (modifier.1 * 0.05) + (self.previous_noise_modifier.1 * 0.95);
+                modifier.2 = (modifier.2 * 0.05) + (self.previous_noise_modifier.2 * 0.95);
+                self.previous_noise_t = t;
                 self.previous_noise_modifier = modifier;
                 let mut pixel_data: [u8; 480 * 480 * 3] = [0; 480 * 480 * 3];
                 for x in 0..480 {
