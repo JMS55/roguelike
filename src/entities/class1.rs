@@ -7,10 +7,10 @@ use rand::Rng;
 use specs::{Builder, Entity, Join, World, WorldExt};
 use std::collections::HashSet;
 
-pub fn create_random_class1(rarity: Rarity, x: i32, y: i32, world: &mut World) {
+pub fn create_random_class1(rarity: Rarity, position: Position, world: &mut World) {
     let create_function = {
         let rng = &mut world.fetch_mut::<RNG>().0;
-        let choices: Vec<fn(i32, i32, &mut World)> = match rarity {
+        let choices: Vec<fn(Position, &mut World)> = match rarity {
             Rarity::Common => vec![create_phase_bat, create_danger_spider, create_pungent_ooze],
             Rarity::Uncommon => vec![create_skeleton_scout, create_volatile_husk],
             Rarity::Rare => vec![create_jack_spectre],
@@ -18,10 +18,10 @@ pub fn create_random_class1(rarity: Rarity, x: i32, y: i32, world: &mut World) {
         };
         *choices.choose(rng).unwrap()
     };
-    (create_function)(x, y, world);
+    (create_function)(position, world);
 }
 
-pub fn create_phase_bat(x: i32, y: i32, world: &mut World) {
+pub fn create_phase_bat(position: Position, world: &mut World) {
     world
         .create_entity()
         .with(Name("Phase Bat"))
@@ -47,13 +47,13 @@ pub fn create_phase_bat(x: i32, y: i32, world: &mut World) {
                 }
             }
         }))
-        .with(Position::new(x, y))
+        .with(position)
         .with(Attackable::new(6))
         .with(Sprite::new("phase_bat"))
         .build();
 }
 
-pub fn create_danger_spider(x: i32, y: i32, world: &mut World) {
+pub fn create_danger_spider(position: Position, world: &mut World) {
     world
         .create_entity()
         .with(Name("Danger! Spider"))
@@ -67,13 +67,13 @@ pub fn create_danger_spider(x: i32, y: i32, world: &mut World) {
                 let _ = try_move_towards(ai_entity, player_entity, world);
             }
         }))
-        .with(Position::new(x, y))
+        .with(position)
         .with(Attackable::new(7))
         .with(Sprite::new("danger_spider"))
         .build();
 }
 
-pub fn create_pungent_ooze(x: i32, y: i32, world: &mut World) {
+pub fn create_pungent_ooze(position: Position, world: &mut World) {
     let mut attackable = Attackable::new(7);
     attackable.has_oozing_buff = true;
     world
@@ -89,13 +89,13 @@ pub fn create_pungent_ooze(x: i32, y: i32, world: &mut World) {
                 let _ = try_move_towards(ai_entity, player_entity, world);
             }
         }))
-        .with(Position::new(x, y))
+        .with(position)
         .with(attackable)
         .with(Sprite::new("pungent_ooze"))
         .build();
 }
 
-pub fn create_skeleton_scout(x: i32, y: i32, world: &mut World) {
+pub fn create_skeleton_scout(position: Position, world: &mut World) {
     world
         .create_entity()
         .with(Name("Skeleton Scout"))
@@ -133,20 +133,19 @@ pub fn create_skeleton_scout(x: i32, y: i32, world: &mut World) {
                         direction_to_move = Direction::Down;
                     }
                     let _ = try_move(ai_entity, direction_to_move, world);
-                    let _ = try_turn(ai_entity, direction_to_move.opposite(), world);
                 }
                 let _ = try_attack(5, 1, 2, ai_entity, player_entity, world);
             } else {
                 let _ = try_move_towards(ai_entity, player_entity, world);
             }
         }))
-        .with(Position::new(x, y))
+        .with(position)
         .with(Attackable::new(9))
         .with(Sprite::new("skeleton_scout"))
         .build();
 }
 
-pub fn create_volatile_husk(x: i32, y: i32, world: &mut World) {
+pub fn create_volatile_husk(position: Position, world: &mut World) {
     let mut attackable = Attackable::new(6);
     attackable.on_death = Some(|ai_entity, _, world| {
         let ai_position = {
@@ -189,13 +188,13 @@ pub fn create_volatile_husk(x: i32, y: i32, world: &mut World) {
                 let _ = try_move_towards(ai_entity, player_entity, world);
             }
         }))
-        .with(Position::new(x, y))
+        .with(position)
         .with(attackable)
         .with(Sprite::new("volatile_husk"))
         .build();
 }
 
-pub fn create_jack_spectre(x: i32, y: i32, world: &mut World) {
+pub fn create_jack_spectre(position: Position, world: &mut World) {
     world
         .create_entity()
         .with(Name("Jack Spectre"))
@@ -218,21 +217,16 @@ pub fn create_jack_spectre(x: i32, y: i32, world: &mut World) {
                             let player_position = position_data.get(player_entity).unwrap();
                             (*ai_position, *player_position)
                         };
-                        let distance_from_player = player_position.distance_from(&ai_position);
+                        let distance_from_player = player_position.distance_from(ai_position);
                         for direction in &[
                             Direction::Up,
                             Direction::Down,
                             Direction::Left,
                             Direction::Right,
                         ] {
-                            let new_ai_position = match direction {
-                                Direction::Up => (ai_position.x, ai_position.y + 1),
-                                Direction::Down => (ai_position.x, ai_position.y - 1),
-                                Direction::Left => (ai_position.x - 1, ai_position.y),
-                                Direction::Right => (ai_position.x + 1, ai_position.y),
-                            };
+                            let new_ai_position = ai_position.offset_by(*direction);
                             if can_move(ai_entity, *direction, &world)
-                                && player_position.distance_from_tuple(new_ai_position)
+                                && player_position.distance_from(new_ai_position)
                                     > distance_from_player
                             {
                                 let _ = try_move(ai_entity, *direction, world);
@@ -250,8 +244,8 @@ pub fn create_jack_spectre(x: i32, y: i32, world: &mut World) {
                                 let intangible_data = world.read_storage::<Intangible>();
                                 (&position_data, !&intangible_data)
                                     .join()
-                                    .map(|(position, _)| (position.x, position.y))
-                                    .collect::<HashSet<(i32, i32)>>()
+                                    .map(|(position, _)| *position)
+                                    .collect::<HashSet<Position>>()
                             };
                             for direction in &[
                                 Direction::Up,
@@ -259,19 +253,9 @@ pub fn create_jack_spectre(x: i32, y: i32, world: &mut World) {
                                 Direction::Left,
                                 Direction::Right,
                             ] {
-                                let (spawn_position_x, spawn_position_y) = match direction {
-                                    Direction::Up => (ai_position.x, ai_position.y + 1),
-                                    Direction::Down => (ai_position.x, ai_position.y - 1),
-                                    Direction::Left => (ai_position.x - 1, ai_position.y),
-                                    Direction::Right => (ai_position.x + 1, ai_position.y),
-                                };
-                                if !obstacles.contains(&(spawn_position_x, spawn_position_y)) {
-                                    create_random_class1(
-                                        Rarity::Common,
-                                        spawn_position_x,
-                                        spawn_position_y,
-                                        world,
-                                    );
+                                let spawn_position = ai_position.offset_by(*direction);
+                                if !obstacles.contains(&spawn_position) {
+                                    create_random_class1(Rarity::Common, spawn_position, world);
                                     break;
                                 }
                             }
@@ -288,13 +272,13 @@ pub fn create_jack_spectre(x: i32, y: i32, world: &mut World) {
             let _ = ai_counter_data.insert(ai_entity, AICounter(0));
         }))
         .with(AICounter(0))
-        .with(Position::new(x, y))
+        .with(position)
         .with(Attackable::new(7))
         .with(Sprite::new("jack_spectre"))
         .build();
 }
 
-pub fn create_king_of_lanterns(x: i32, y: i32, world: &mut World) {
+pub fn create_king_of_lanterns(position: Position, world: &mut World) {
     let mut attackable = Attackable::new(47);
     attackable.on_death = Some(replace_with_staircase_on_death);
     world
@@ -302,35 +286,13 @@ pub fn create_king_of_lanterns(x: i32, y: i32, world: &mut World) {
         .with(Name("King of the Lanterns"))
         // TODO
         // .with(AI::new(|ai_entity, world| {}))
-        .with(Position::new(x, y)) // TODO: generate staircase on death
+        .with(position) // TODO: generate staircase on death
         .with(attackable)
         .with(Sprite::new("placeholder"))
         .build();
 }
 
-pub fn create_king_of_lanterns_illusion(x: i32, y: i32, world: &mut World) {
-    world
-        .create_entity()
-        .with(Name("King of the Lanterns"))
-        .with(Position::new(x, y))
-        .with(Attackable::new(1))
-        .with(Sprite::new("placeholder"))
-        .build();
-}
-
-pub fn create_king_of_lanterns_flame(x: i32, y: i32, world: &mut World) {
-    world
-        .create_entity()
-        .with(Name("Pillar of Flame"))
-        // TODO
-        // .with(AI::new(|ai_entity, world| {}))
-        .with(Position::new(x, y))
-        .with(Intangible {})
-        .with(Sprite::new("placeholder"))
-        .build();
-}
-
-pub fn create_moth_priestess(x: i32, y: i32, world: &mut World) {
+pub fn create_moth_priestess(position: Position, world: &mut World) {
     let mut attackable = Attackable::new(47);
     attackable.on_death = Some(replace_with_staircase_on_death);
     world
@@ -338,26 +300,20 @@ pub fn create_moth_priestess(x: i32, y: i32, world: &mut World) {
         .with(Name("The Moth Priestess"))
         // TODO
         // .with(AI::new(|ai_entity, world| {}))
-        .with(Position::new(x, y))
+        .with(position)
         .with(attackable)
         .with(Sprite::new("placeholder"))
         .build();
 }
 
-pub fn create_moth_worshipper(x: i32, y: i32, world: &mut World) {
+pub fn create_moth_worshipper(position: Position, world: &mut World) {
     world
         .create_entity()
         .with(Name("Moth Worshipper"))
         // TODO
         // .with(AI::new(|ai_entity, world| {}))
-        .with(Position::new(x, y))
+        .with(position)
         .with(Attackable::new(12))
         .with(Sprite::new("placeholder"))
         .build();
-}
-
-impl Position {
-    pub fn distance_from_tuple(&self, (other_x, other_y): (i32, i32)) -> u32 {
-        (self.x - other_x).abs() as u32 + (self.y - other_y).abs() as u32
-    }
 }

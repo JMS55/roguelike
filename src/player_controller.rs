@@ -1,6 +1,6 @@
 use crate::data::{Attackable, Direction, GameState, Player, Position, Staircase};
 use crate::generate_dungeon::GenerateDungeonSystem;
-use crate::movement::{try_move, try_turn};
+use crate::movement::try_move;
 use specs::{Join, World, WorldExt};
 
 pub struct PlayerControllerSystem {
@@ -19,10 +19,11 @@ impl PlayerControllerSystem {
         generate_dungeon_system: &mut GenerateDungeonSystem,
         world: &mut World,
     ) -> PlayerActed {
-        let player_entity = {
-            let entities = world.entities();
+        let (player, player_entity) = {
             let player_data = world.read_storage::<Player>();
-            (&entities, &player_data).join().next().unwrap().0
+            let entities = world.entities();
+            let (player, player_entity) = (&player_data, &entities).join().next().unwrap();
+            (*player, player_entity)
         };
 
         let player_acted = match self.action {
@@ -36,15 +37,10 @@ impl PlayerControllerSystem {
                     let position_data = world.read_storage::<Position>();
                     let staircase_data = world.read_storage::<Staircase>();
                     let player_position = position_data.get(player_entity).unwrap();
-                    let (new_x, new_y) = match player_position.facing_direction {
-                        Direction::Up => (player_position.x, player_position.y + 1),
-                        Direction::Down => (player_position.x, player_position.y - 1),
-                        Direction::Left => (player_position.x - 1, player_position.y),
-                        Direction::Right => (player_position.x + 1, player_position.y),
-                    };
+                    let new_position = player_position.offset_by(player.facing_direction);
                     (&position_data, &staircase_data)
                         .join()
-                        .any(|(position, _)| position.x == new_x && position.y == new_y)
+                        .any(|(position, _)| position == &new_position)
                 };
                 if is_facing_staircase {
                     {
@@ -65,18 +61,14 @@ impl PlayerControllerSystem {
                 is_facing_staircase
             }
             PlayerAction::Turn(direction) => {
-                let _ = try_turn(player_entity, direction, world);
+                let mut player_data = world.write_storage::<Player>();
+                player_data.get_mut(player_entity).unwrap().facing_direction = direction;
                 self.action = PlayerAction::None;
                 false
             }
             PlayerAction::Move(direction) => {
-                if try_move(player_entity, direction, world).is_ok() {
-                    self.action = PlayerAction::None;
-                    true
-                } else {
-                    self.action = PlayerAction::Turn(direction);
-                    false
-                }
+                self.action = PlayerAction::Turn(direction);
+                try_move(player_entity, direction, world).is_ok()
             }
         };
 

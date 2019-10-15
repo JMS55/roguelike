@@ -94,8 +94,8 @@ impl RenderSystem {
                     && (0..15).contains(&adjusted_entity_position_y)
                 {
                     let dest_rect = Rect::new(
-                        adjusted_entity_position_x * 32,
-                        adjusted_entity_position_y * 32,
+                        (adjusted_entity_position_x * 32) as i32,
+                        (adjusted_entity_position_y * 32) as i32,
                         32,
                         32,
                     );
@@ -103,11 +103,11 @@ impl RenderSystem {
                         .load_texture(format!("assets/{}.png", entity_sprite.id))
                         .unwrap();
                     self.canvas.copy(&texture, None, dest_rect).unwrap();
-                    if player_data.get(entity).is_some() {
+                    if let Some(player) = player_data.get(entity) {
                         let texture = texture_creator
                             .load_texture("assets/direction_indicator.png")
                             .unwrap();
-                        let rotation = match entity_position.facing_direction {
+                        let rotation = match player.facing_direction {
                             Direction::Up => 90.0,
                             Direction::Down => 270.0,
                             Direction::Left => 0.0,

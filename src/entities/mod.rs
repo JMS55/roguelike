@@ -18,31 +18,31 @@ pub fn create_player(world: &mut World) {
         .build();
 }
 
-pub fn create_staircase(x: i32, y: i32, world: &mut World) {
+pub fn create_staircase(position: Position, world: &mut World) {
     world
         .create_entity()
         .with(Name("Staircase"))
         .with(Staircase {})
-        .with(Position::new(x, y))
+        .with(position)
         .with(Sprite::new("staircase"))
         .build();
 }
 
-pub fn create_spawner(x: i32, y: i32, world: &mut World) {
+pub fn create_spawner(position: Position, world: &mut World) {
     world
         .create_entity()
         .with(Name("Spawner"))
         .with(Spawner::new())
-        .with(Position::new(x, y))
+        .with(position)
         .with(Intangible {})
         .build();
 }
 
-pub fn create_wall(x: i32, y: i32, world: &mut World, rng: &mut Pcg64) {
+pub fn create_wall(position: Position, world: &mut World, rng: &mut Pcg64) {
     world
         .create_entity()
         .with(Name("Wall"))
-        .with(Position::new(x, y))
+        .with(position)
         .with(Sprite::new(if rng.gen_ratio(1, 4) {
             "wall_mossy"
         } else {
@@ -51,11 +51,11 @@ pub fn create_wall(x: i32, y: i32, world: &mut World, rng: &mut Pcg64) {
         .build();
 }
 
-pub fn create_floor(x: i32, y: i32, world: &mut World) {
+pub fn create_floor(position: Position, world: &mut World) {
     world
         .create_entity()
         .with(Name("Floor"))
-        .with(Position::new(x, y))
+        .with(position)
         .with(Intangible {})
         .with(Sprite {
             id: "floor",
@@ -69,5 +69,5 @@ fn replace_with_staircase_on_death(ai_entity: Entity, _: Option<Entity>, world: 
         let position_data = world.read_storage::<Position>();
         *position_data.get(ai_entity).unwrap()
     };
-    create_staircase(ai_position.x, ai_position.y, world);
+    create_staircase(ai_position, world);
 }

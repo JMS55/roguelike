@@ -3,6 +3,7 @@ use rand_pcg::Pcg64;
 use specs::storage::BTreeStorage;
 use specs::{Component, Entity, World};
 use specs_derive::Component;
+use std::collections::HashSet;
 use std::time::{Duration, Instant};
 
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
@@ -12,18 +13,39 @@ pub struct Name(pub &'static str);
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 #[storage(BTreeStorage)]
 pub struct Position {
-    pub x: i32,
-    pub y: i32,
-    pub facing_direction: Direction,
+    pub x: i16,
+    pub y: i16,
 }
 
 impl Position {
-    pub fn new(x: i32, y: i32) -> Self {
-        Self {
-            x,
-            y,
-            facing_direction: Direction::Right,
+    pub fn new(x: i16, y: i16) -> Self {
+        Self { x, y }
+    }
+
+    pub fn distance_from(self, other: Self) -> u32 {
+        (other.x - self.x).abs() as u32 + (other.y - self.y).abs() as u32
+    }
+
+    pub fn offset_by(self, direction: Direction) -> Self {
+        match direction {
+            Direction::Up => Self::new(self.x, self.y + 1),
+            Direction::Down => Self::new(self.x, self.y - 1),
+            Direction::Left => Self::new(self.x - 1, self.y),
+            Direction::Right => Self::new(self.x + 1, self.y),
         }
+    }
+
+    pub fn neighbors(self, obstacles: &HashSet<Self>) -> Vec<Position> {
+        let mut neighbors = Vec::with_capacity(4);
+        for (x_offset, y_offset) in &[(1, 0), (-1, 0), (0, 1), (0, -1)] {
+            let mut new_position = self;
+            new_position.x += x_offset;
+            new_position.y += y_offset;
+            if !obstacles.contains(&new_position) {
+                neighbors.push(new_position);
+            }
+        }
+        neighbors
     }
 }
 
@@ -92,6 +114,7 @@ pub struct Intangible {}
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 #[storage(BTreeStorage)]
 pub struct Player {
+    pub facing_direction: Direction,
     pub crystals: u32,
     pub turns_taken: u32,
 }
@@ -99,6 +122,7 @@ pub struct Player {
 impl Player {
     pub fn new() -> Self {
         Self {
+            facing_direction: Direction::Up,
             crystals: 500,
             turns_taken: 0,
         }
@@ -227,17 +251,6 @@ pub enum Direction {
     Down,
     Left,
     Right,
-}
-
-impl Direction {
-    pub fn opposite(self) -> Self {
-        match self {
-            Direction::Up => Direction::Down,
-            Direction::Down => Direction::Up,
-            Direction::Left => Direction::Right,
-            Direction::Right => Direction::Left,
-        }
-    }
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]

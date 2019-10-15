@@ -13,8 +13,8 @@ pub fn tick_spawners(world: &mut World) {
             let intangible_data = world.read_storage::<Intangible>();
             (&position_data, !&intangible_data)
                 .join()
-                .map(|(position, _)| (position.x, position.y))
-                .collect::<HashSet<(i32, i32)>>()
+                .map(|(position, _)| *position)
+                .collect::<HashSet<Position>>()
         };
 
         let mut spawner_data = world.write_storage::<Spawner>();
@@ -27,7 +27,7 @@ pub fn tick_spawners(world: &mut World) {
     }
 
     for spawn_position in spawn_positions {
-        if !obstacles.contains(&(spawn_position.x, spawn_position.y)) {
+        if !obstacles.contains(&spawn_position) {
             let rarity = {
                 let rng = &mut world.fetch_mut::<RNG>().0;
                 [
@@ -39,8 +39,8 @@ pub fn tick_spawners(world: &mut World) {
                 .unwrap()
                 .0
             };
-            obstacles.insert((spawn_position.x, spawn_position.y));
-            create_random_class1(rarity, spawn_position.x, spawn_position.y, world);
+            obstacles.insert(spawn_position);
+            create_random_class1(rarity, spawn_position, world);
         }
     }
 }

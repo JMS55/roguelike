@@ -22,17 +22,11 @@ pub fn enemy_controller_system(world: &mut World) {
             .collect::<Vec<(AI, Position, Entity)>>()
     };
     ai_list.sort_unstable_by(|(_, p1, _), (_, p2, _)| {
-        p1.distance_from(p2)
-            .cmp(&p2.distance_from(&player_position))
+        p1.distance_from(*p2)
+            .cmp(&p2.distance_from(player_position))
     });
 
     for (ai, _, ai_entity) in &ai_list {
         (ai.run)(*ai_entity, world);
-    }
-}
-
-impl Position {
-    pub fn distance_from(&self, other: &Self) -> u32 {
-        (self.x - other.x).abs() as u32 + (self.y - other.y).abs() as u32
     }
 }

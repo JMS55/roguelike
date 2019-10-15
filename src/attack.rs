@@ -1,5 +1,4 @@
 use crate::data::*;
-use crate::movement::try_turn;
 use specs::{Entity, World, WorldExt};
 
 /// Returns whether or not the target died and the amount of damage dealt
@@ -74,34 +73,18 @@ pub fn try_attack(
             )
         };
 
-        let (direction_to_move, gap) = {
+        let gap = {
             let position_data = world.read_storage::<Position>();
             let attacker_position = position_data.get(attacker).unwrap();
             let target_position = position_data.get(target).unwrap();
-
-            let mut direction_to_move = Direction::Up;
-            let change_in_x = attacker_position.x - target_position.x;
-            let change_in_y = attacker_position.y - target_position.y;
-            if change_in_x < 0 {
-                direction_to_move = Direction::Left;
-            }
-            if change_in_x > 0 {
-                direction_to_move = Direction::Right;
-            }
-            if change_in_y < 0 {
-                direction_to_move = Direction::Down;
-            }
-
             let mut gap = (attacker_position.x - target_position.x).abs() as u32;
             let y_gap = (attacker_position.y - target_position.y).abs() as u32;
             if y_gap > gap {
                 gap = y_gap;
             }
-
-            (direction_to_move, gap)
+            gap
         };
 
-        try_turn(attacker, direction_to_move, world)?;
         let (target_died, damage_dealt) =
             damage(base_damage, gap == 1, Some(attacker), target, world);
 

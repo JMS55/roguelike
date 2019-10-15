@@ -1,4 +1,6 @@
-use crate::data::{MessageColor, MessageDisplayLength, MessageLog, Player, Position, Rarity};
+use crate::data::{
+    Direction, MessageColor, MessageDisplayLength, MessageLog, Player, Position, Rarity,
+};
 use crate::entities;
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
@@ -34,6 +36,7 @@ impl GenerateDungeonSystem {
                     .join()
                     .next()
                     .unwrap();
+            player.facing_direction = Direction::Up;
             *player_position = Position::new(0, 0);
             player.turns_taken = 0;
 
@@ -50,28 +53,26 @@ impl GenerateDungeonSystem {
         if self.next_floor != self.next_boss_floor {
             let mut rooms = Vec::with_capacity(41);
             let starting_room = Room {
-                center_x: 0,
-                center_y: 0,
+                center: Position::new(0, 0),
                 x_radius: 3,
                 y_radius: 3,
             };
             rooms.push(starting_room);
             'room_placing_loop: for _ in 0..200 {
                 let room = Room {
-                    center_x: self.rng.gen_range(-30, 31),
-                    center_y: self.rng.gen_range(-30, 31),
+                    center: Position::new(self.rng.gen_range(-30, 31), self.rng.gen_range(-30, 31)),
                     x_radius: self.rng.gen_range(2, 8),
                     y_radius: self.rng.gen_range(2, 8),
                 };
                 for other_room in &rooms {
                     let required_gap = self.rng.gen_range(3, 10);
-                    let x_gap = (room.center_x - other_room.center_x).abs()
-                        - room.x_radius as i32
-                        - other_room.x_radius as i32
+                    let x_gap = (room.center.x - other_room.center.x).abs()
+                        - room.x_radius as i16
+                        - other_room.x_radius as i16
                         - 3;
-                    let y_gap = (room.center_y - other_room.center_y).abs()
-                        - room.y_radius as i32
-                        - other_room.y_radius as i32
+                    let y_gap = (room.center.y - other_room.center.y).abs()
+                        - room.y_radius as i16
+                        - other_room.y_radius as i16
                         - 3;
                     let actual_gap = x_gap.max(y_gap);
                     if actual_gap < required_gap && actual_gap != -1 {
@@ -89,109 +90,124 @@ impl GenerateDungeonSystem {
                 }
                 let end_room = &rooms[end_room_index];
                 let start_x = self.rng.gen_range(
-                    start_room.center_x - start_room.x_radius as i32,
-                    start_room.center_x + start_room.x_radius as i32 + 1,
+                    start_room.center.x - start_room.x_radius as i16,
+                    start_room.center.x + start_room.x_radius as i16 + 1,
                 );
                 let start_y = self.rng.gen_range(
-                    start_room.center_y - start_room.y_radius as i32,
-                    start_room.center_y + start_room.y_radius as i32 + 1,
+                    start_room.center.y - start_room.y_radius as i16,
+                    start_room.center.y + start_room.y_radius as i16 + 1,
                 );
                 let end_x = self.rng.gen_range(
-                    end_room.center_x - end_room.x_radius as i32,
-                    end_room.center_x + end_room.x_radius as i32 + 1,
+                    end_room.center.x - end_room.x_radius as i16,
+                    end_room.center.x + end_room.x_radius as i16 + 1,
                 );
                 let end_y = self.rng.gen_range(
-                    end_room.center_y - end_room.y_radius as i32,
-                    end_room.center_y + end_room.y_radius as i32 + 1,
+                    end_room.center.y - end_room.y_radius as i16,
+                    end_room.center.y + end_room.y_radius as i16 + 1,
                 );
                 for x in start_x.min(end_x)..start_x.max(end_x) {
-                    corridor_positions.insert((x, start_y));
+                    corridor_positions.insert(Position::new(x, start_y));
                 }
                 for y in start_y.min(end_y)..=start_y.max(end_y) {
-                    corridor_positions.insert((end_x, y));
+                    corridor_positions.insert(Position::new(end_x, y));
                 }
             }
 
             for room in &rooms {
-                let x_radius = room.x_radius as i32;
-                let y_radius = room.y_radius as i32;
+                let x_radius = room.x_radius as i16;
+                let y_radius = room.y_radius as i16;
                 for x in -x_radius..=x_radius {
                     for y in -y_radius..=y_radius {
-                        entities::create_floor(room.center_x + x, room.center_y + y, world);
+                        entities::create_floor(
+                            Position::new(room.center.x + x, room.center.y + y),
+                            world,
+                        );
                     }
                 }
             }
-            for (corridor_x, corridor_y) in &corridor_positions {
-                entities::create_floor(*corridor_x, *corridor_y, world);
+            for corridor_position in &corridor_positions {
+                entities::create_floor(*corridor_position, world);
             }
 
             let mut room_wall_positions = HashSet::with_capacity(rooms.len() * 36);
             for room in &rooms {
-                let x_radius = room.x_radius as i32;
-                let y_radius = room.y_radius as i32;
+                let x_radius = room.x_radius as i16;
+                let y_radius = room.y_radius as i16;
                 for x in -(x_radius + 1)..=(x_radius + 1) {
-                    room_wall_positions.insert((room.center_x + x, room.center_y + y_radius + 1));
-                    room_wall_positions.insert((room.center_x + x, room.center_y - y_radius - 1));
+                    room_wall_positions.insert(Position::new(
+                        room.center.x + x,
+                        room.center.y + y_radius + 1,
+                    ));
+                    room_wall_positions.insert(Position::new(
+                        room.center.x + x,
+                        room.center.y - y_radius - 1,
+                    ));
                 }
                 for y in -y_radius..=y_radius {
-                    room_wall_positions.insert((room.center_x + x_radius + 1, room.center_y + y));
-                    room_wall_positions.insert((room.center_x - x_radius - 1, room.center_y + y));
+                    room_wall_positions.insert(Position::new(
+                        room.center.x + x_radius + 1,
+                        room.center.y + y,
+                    ));
+                    room_wall_positions.insert(Position::new(
+                        room.center.x - x_radius - 1,
+                        room.center.y + y,
+                    ));
                 }
             }
 
             let mut corridor_wall_positions = HashSet::with_capacity(corridor_positions.len() * 3);
-            for (x, y) in &corridor_positions {
-                'neighbor_loop: for (x, y) in &get_neighbors(*x, *y) {
+            for corridor_position in &corridor_positions {
+                'neighbor_loop: for (x, y) in &corridor_position.get_neighbors() {
                     for room in &rooms {
-                        let x_radius = room.x_radius as i32;
-                        let y_radius = room.y_radius as i32;
+                        let x_radius = room.x_radius as i16;
+                        let y_radius = room.y_radius as i16;
                         let x_range =
-                            (room.center_x - x_radius - 1)..=(room.center_x + x_radius + 1);
+                            (room.center.x - x_radius - 1)..=(room.center.x + x_radius + 1);
                         let y_range =
-                            (room.center_y - y_radius - 1)..=(room.center_y + y_radius + 1);
+                            (room.center.y - y_radius - 1)..=(room.center.y + y_radius + 1);
                         if x_range.contains(x) && y_range.contains(y) {
                             continue 'neighbor_loop;
                         }
                     }
-                    corridor_wall_positions.insert((*x, *y));
+                    corridor_wall_positions.insert(Position::new(*x, *y));
                 }
             }
 
             let wall_positions = room_wall_positions
                 .union(&corridor_wall_positions)
                 .cloned()
-                .collect::<HashSet<(i32, i32)>>();
+                .collect::<HashSet<Position>>();
             let wall_positions = wall_positions
                 .difference(&corridor_positions)
                 .cloned()
-                .collect::<HashSet<(i32, i32)>>();
-            for (x, y) in &wall_positions {
-                entities::create_wall(*x, *y, world, &mut self.rng);
+                .collect::<HashSet<Position>>();
+            for wall_position in &wall_positions {
+                entities::create_wall(*wall_position, world, &mut self.rng);
             }
 
             let staircase_room = &rooms[1];
             let staircase_x = self.rng.gen_range(
-                staircase_room.center_x - staircase_room.x_radius as i32 + 1,
-                staircase_room.center_x + staircase_room.x_radius as i32,
+                staircase_room.center.x - staircase_room.x_radius as i16 + 1,
+                staircase_room.center.x + staircase_room.x_radius as i16,
             );
             let staircase_y = self.rng.gen_range(
-                staircase_room.center_y - staircase_room.y_radius as i32 + 1,
-                staircase_room.center_y + staircase_room.y_radius as i32,
+                staircase_room.center.y - staircase_room.y_radius as i16 + 1,
+                staircase_room.center.y + staircase_room.y_radius as i16,
             );
-            entities::create_staircase(staircase_x, staircase_y, world);
+            entities::create_staircase(Position::new(staircase_x, staircase_y), world);
 
             for room in &rooms {
                 if self.rng.gen_ratio(1, 4) {
                     let x = self.rng.gen_range(
-                        room.center_x - room.x_radius as i32,
-                        room.center_x + room.x_radius as i32 + 1,
+                        room.center.x - room.x_radius as i16,
+                        room.center.x + room.x_radius as i16 + 1,
                     );
                     let y = self.rng.gen_range(
-                        room.center_y - room.y_radius as i32,
-                        room.center_y + room.y_radius as i32 + 1,
+                        room.center.y - room.y_radius as i16,
+                        room.center.y + room.y_radius as i16 + 1,
                     );
                     if x != staircase_x && y != staircase_y {
-                        entities::create_spawner(x, y, world);
+                        entities::create_spawner(Position::new(x, y), world);
                     }
                 }
             }
@@ -229,40 +245,40 @@ impl GenerateDungeonSystem {
                 (2, -6),
                 (1, -6),
             ];
-            entities::create_wall(0, 10, world, &mut self.rng);
-            entities::create_wall(0, -6, world, &mut self.rng);
+            entities::create_wall(Position::new(0, 10), world, &mut self.rng);
+            entities::create_wall(Position::new(0, -6), world, &mut self.rng);
             for (wall_x, wall_y) in &semicircle_positions {
-                entities::create_wall(*wall_x, *wall_y, world, &mut self.rng);
-                entities::create_wall(-*wall_x, *wall_y, world, &mut self.rng);
+                entities::create_wall(Position::new(*wall_x, *wall_y), world, &mut self.rng);
+                entities::create_wall(Position::new(-*wall_x, *wall_y), world, &mut self.rng);
             }
 
             for floor_y in -5..=9 {
-                entities::create_floor(-1, floor_y, world);
-                entities::create_floor(-2, floor_y, world);
-                entities::create_floor(0, floor_y, world);
-                entities::create_floor(1, floor_y, world);
-                entities::create_floor(2, floor_y, world);
+                entities::create_floor(Position::new(-1, floor_y), world);
+                entities::create_floor(Position::new(-2, floor_y), world);
+                entities::create_floor(Position::new(0, floor_y), world);
+                entities::create_floor(Position::new(1, floor_y), world);
+                entities::create_floor(Position::new(2, floor_y), world);
             }
             for floor_y in -4..=8 {
-                entities::create_floor(-3, floor_y, world);
-                entities::create_floor(-4, floor_y, world);
-                entities::create_floor(3, floor_y, world);
-                entities::create_floor(4, floor_y, world);
+                entities::create_floor(Position::new(-3, floor_y), world);
+                entities::create_floor(Position::new(-4, floor_y), world);
+                entities::create_floor(Position::new(3, floor_y), world);
+                entities::create_floor(Position::new(4, floor_y), world);
             }
             for floor_y in -3..=7 {
-                entities::create_floor(-5, floor_y, world);
-                entities::create_floor(5, floor_y, world);
+                entities::create_floor(Position::new(-5, floor_y), world);
+                entities::create_floor(Position::new(5, floor_y), world);
             }
             for floor_y in -2..=6 {
-                entities::create_floor(-6, floor_y, world);
-                entities::create_floor(6, floor_y, world);
+                entities::create_floor(Position::new(-6, floor_y), world);
+                entities::create_floor(Position::new(6, floor_y), world);
             }
             for floor_y in 0..=4 {
-                entities::create_floor(-7, floor_y, world);
-                entities::create_floor(7, floor_y, world);
+                entities::create_floor(Position::new(-7, floor_y), world);
+                entities::create_floor(Position::new(7, floor_y), world);
             }
 
-            entities::create_random_class1(Rarity::Epic, 0, 4, world);
+            entities::create_random_class1(Rarity::Epic, Position::new(0, 4), world);
 
             self.next_boss_floor = self.rng.gen_range(8, 11) + self.next_floor;
         }
@@ -278,21 +294,22 @@ impl GenerateDungeonSystem {
 }
 
 struct Room {
-    center_x: i32,
-    center_y: i32,
-    x_radius: u32,
-    y_radius: u32,
+    center: Position,
+    x_radius: u16,
+    y_radius: u16,
 }
 
-fn get_neighbors(x: i32, y: i32) -> [(i32, i32); 8] {
-    [
-        (x + 1, y),
-        (x - 1, y),
-        (x, y + 1),
-        (x, y - 1),
-        (x + 1, y + 1),
-        (x + 1, y - 1),
-        (x - 1, y + 1),
-        (x - 1, y - 1),
-    ]
+impl Position {
+    fn get_neighbors(self) -> [(i16, i16); 8] {
+        [
+            (self.x + 1, self.y),
+            (self.x - 1, self.y),
+            (self.x, self.y + 1),
+            (self.x, self.y - 1),
+            (self.x + 1, self.y + 1),
+            (self.x + 1, self.y - 1),
+            (self.x - 1, self.y + 1),
+            (self.x - 1, self.y - 1),
+        ]
+    }
 }
