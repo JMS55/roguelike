@@ -1,5 +1,5 @@
 use crate::data::{Intangible, Position, Rarity, Spawner, RNG};
-use crate::entities::create_random_class1;
+use crate::entities::create_random_layer1;
 use rand::seq::SliceRandom;
 use specs::{Join, World, WorldExt};
 use std::collections::HashSet;
@@ -40,7 +40,7 @@ pub fn tick_spawners(world: &mut World) {
                 .0
             };
             obstacles.insert(spawn_position);
-            create_random_class1(rarity, spawn_position, world);
+            create_random_layer1(rarity, spawn_position, world);
         }
     }
 }

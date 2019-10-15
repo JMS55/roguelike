@@ -32,12 +32,25 @@ impl Position {
             Direction::Down => Self::new(self.x, self.y - 1),
             Direction::Left => Self::new(self.x - 1, self.y),
             Direction::Right => Self::new(self.x + 1, self.y),
+            Direction::UpLeft => Self::new(self.x - 1, self.y + 1),
+            Direction::DownLeft => Self::new(self.x - 1, self.y - 1),
+            Direction::DownRight => Self::new(self.x + 1, self.y - 1),
+            Direction::UpRight => Self::new(self.x + 1, self.y + 1),
         }
     }
 
     pub fn neighbors(self, obstacles: &HashSet<Self>) -> Vec<Position> {
         let mut neighbors = Vec::with_capacity(4);
-        for (x_offset, y_offset) in &[(1, 0), (-1, 0), (0, 1), (0, -1)] {
+        for (x_offset, y_offset) in &[
+            (1, 0),
+            (-1, 0),
+            (0, 1),
+            (0, -1),
+            (1, 1),
+            (1, -1),
+            (-1, 1),
+            (-1, -1),
+        ] {
             let mut new_position = self;
             new_position.x += x_offset;
             new_position.y += y_offset;
@@ -251,6 +264,10 @@ pub enum Direction {
     Down,
     Left,
     Right,
+    UpLeft,
+    DownLeft,
+    DownRight,
+    UpRight,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]

@@ -278,7 +278,7 @@ impl GenerateDungeonSystem {
                 entities::create_floor(Position::new(7, floor_y), world);
             }
 
-            entities::create_random_class1(Rarity::Epic, Position::new(0, 4), world);
+            entities::create_random_layer1(Rarity::Epic, Position::new(0, 4), world);
 
             self.next_boss_floor = self.rng.gen_range(8, 11) + self.next_floor;
         }

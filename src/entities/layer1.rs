@@ -7,7 +7,7 @@ use rand::Rng;
 use specs::{Builder, Entity, Join, World, WorldExt};
 use std::collections::HashSet;
 
-pub fn create_random_class1(rarity: Rarity, position: Position, world: &mut World) {
+pub fn create_random_layer1(rarity: Rarity, position: Position, world: &mut World) {
     let create_function = {
         let rng = &mut world.fetch_mut::<RNG>().0;
         let choices: Vec<fn(Position, &mut World)> = match rarity {
@@ -223,6 +223,10 @@ pub fn create_jack_spectre(position: Position, world: &mut World) {
                             Direction::Down,
                             Direction::Left,
                             Direction::Right,
+                            Direction::UpLeft,
+                            Direction::DownLeft,
+                            Direction::DownRight,
+                            Direction::UpRight,
                         ] {
                             let new_ai_position = ai_position.offset_by(*direction);
                             if can_move(ai_entity, *direction, &world)
@@ -255,7 +259,7 @@ pub fn create_jack_spectre(position: Position, world: &mut World) {
                             ] {
                                 let spawn_position = ai_position.offset_by(*direction);
                                 if !obstacles.contains(&spawn_position) {
-                                    create_random_class1(Rarity::Common, spawn_position, world);
+                                    create_random_layer1(Rarity::Common, spawn_position, world);
                                     break;
                                 }
                             }
@@ -283,7 +287,7 @@ pub fn create_king_of_lanterns(position: Position, world: &mut World) {
     attackable.on_death = Some(replace_with_staircase_on_death);
     world
         .create_entity()
-        .with(Name("King of the Lanterns"))
+        .with(Name("Siro, King of the Lanterns"))
         // TODO
         // .with(AI::new(|ai_entity, world| {}))
         .with(position) // TODO: generate staircase on death
@@ -297,7 +301,7 @@ pub fn create_moth_priestess(position: Position, world: &mut World) {
     attackable.on_death = Some(replace_with_staircase_on_death);
     world
         .create_entity()
-        .with(Name("The Moth Priestess"))
+        .with(Name("Xilphne, The Moth Priestess"))
         // TODO
         // .with(AI::new(|ai_entity, world| {}))
         .with(position)

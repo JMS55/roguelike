@@ -15,9 +15,10 @@ use enemy_controller::enemy_controller_system;
 use generate_dungeon::GenerateDungeonSystem;
 use player_controller::{PlayerActed, PlayerAction, PlayerControllerSystem};
 use render::RenderSystem;
-use sdl2::event::Event;
-use sdl2::keyboard::{Mod, Scancode};
 use spawn::tick_spawners;
+
+use sdl2::event::Event;
+use sdl2::keyboard::Scancode;
 use specs::{World, WorldExt};
 use std::time::{Duration, Instant};
 
@@ -43,74 +44,75 @@ fn main() {
     let mut generate_dungeon_system = GenerateDungeonSystem::new();
     let mut render_system = RenderSystem::new(&sdl_context);
 
+    let mut frames_since_last_input = 4;
     let mut time_accumulator = Duration::from_secs(0);
     let mut previous_time = Instant::now();
     'game_loop: loop {
         let game_state = *world.fetch::<GameState>();
+
         for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. } => break 'game_loop,
-                Event::KeyDown {
-                    scancode, keymod, ..
-                } => match scancode {
-                    #[cfg(debug_assertions)]
-                    Some(Scancode::Escape) => break 'game_loop,
-                    Some(Scancode::W) => {
-                        if game_state == GameState::PlayerTurn {
-                            if keymod.contains(Mod::LSHIFTMOD) {
-                                player_controller_system.action = PlayerAction::Turn(Direction::Up);
-                            } else {
-                                player_controller_system.action = PlayerAction::Move(Direction::Up);
-                            }
-                        }
-                    }
-                    Some(Scancode::A) => {
-                        if game_state == GameState::PlayerTurn {
-                            if keymod.contains(Mod::LSHIFTMOD) {
-                                player_controller_system.action =
-                                    PlayerAction::Turn(Direction::Left);
-                            } else {
-                                player_controller_system.action =
-                                    PlayerAction::Move(Direction::Left);
-                            }
-                        }
-                    }
-                    Some(Scancode::S) => {
-                        if game_state == GameState::PlayerTurn {
-                            if keymod.contains(Mod::LSHIFTMOD) {
-                                player_controller_system.action =
-                                    PlayerAction::Turn(Direction::Down);
-                            } else {
-                                player_controller_system.action =
-                                    PlayerAction::Move(Direction::Down);
-                            }
-                        }
-                    }
-                    Some(Scancode::D) => {
-                        if game_state == GameState::PlayerTurn {
-                            if keymod.contains(Mod::LSHIFTMOD) {
-                                player_controller_system.action =
-                                    PlayerAction::Turn(Direction::Right);
-                            } else {
-                                player_controller_system.action =
-                                    PlayerAction::Move(Direction::Right);
-                            }
-                        }
-                    }
-                    Some(Scancode::Q) => {
-                        if game_state == GameState::PlayerTurn {
-                            player_controller_system.action = PlayerAction::Interact;
-                        }
-                    }
-                    Some(Scancode::E) => {
-                        if game_state == GameState::PlayerTurn {
-                            player_controller_system.action = PlayerAction::Pass;
-                        }
-                    }
-                    _ => {}
-                },
-                _ => {}
+            if let Event::Quit { .. } = event {
+                break 'game_loop;
             }
+        }
+        let keyboard = event_pump.keyboard_state();
+        if keyboard.is_scancode_pressed(Scancode::Escape) {
+            break 'game_loop;
+        }
+        if game_state == GameState::PlayerTurn && frames_since_last_input >= 4 {
+            let mut keystate = (0, 0, true);
+            if keyboard.is_scancode_pressed(Scancode::LShift) {
+                frames_since_last_input = 0;
+                keystate.2 = false;
+            }
+            if keyboard.is_scancode_pressed(Scancode::W) {
+                frames_since_last_input = 0;
+                keystate.1 = 1;
+            }
+            if keyboard.is_scancode_pressed(Scancode::A) {
+                frames_since_last_input = 0;
+                player_controller_system.action = PlayerAction::Turn(Direction::Left);
+                keystate.0 = -1;
+            }
+            if keyboard.is_scancode_pressed(Scancode::S) {
+                frames_since_last_input = 0;
+                player_controller_system.action = PlayerAction::Turn(Direction::Down);
+                keystate.1 = -1;
+            }
+            if keyboard.is_scancode_pressed(Scancode::D) {
+                frames_since_last_input = 0;
+                keystate.0 = 1;
+            }
+            player_controller_system.action = match keystate {
+                (0, 0, _) => PlayerAction::None,
+                (1, 0, true) => PlayerAction::Move(Direction::Right),
+                (-1, 0, true) => PlayerAction::Move(Direction::Left),
+                (0, 1, true) => PlayerAction::Move(Direction::Up),
+                (0, -1, true) => PlayerAction::Move(Direction::Down),
+                (1, 1, true) => PlayerAction::Move(Direction::UpRight),
+                (1, -1, true) => PlayerAction::Move(Direction::DownRight),
+                (-1, 1, true) => PlayerAction::Move(Direction::UpLeft),
+                (-1, -1, true) => PlayerAction::Move(Direction::DownLeft),
+                (1, 0, false) => PlayerAction::Turn(Direction::Right),
+                (-1, 0, false) => PlayerAction::Turn(Direction::Left),
+                (0, 1, false) => PlayerAction::Turn(Direction::Up),
+                (0, -1, false) => PlayerAction::Turn(Direction::Down),
+                (1, 1, false) => PlayerAction::Turn(Direction::UpRight),
+                (1, -1, false) => PlayerAction::Turn(Direction::DownRight),
+                (-1, 1, false) => PlayerAction::Turn(Direction::UpLeft),
+                (-1, -1, false) => PlayerAction::Turn(Direction::DownLeft),
+                _ => unreachable!(),
+            };
+            if keyboard.is_scancode_pressed(Scancode::E) {
+                frames_since_last_input = 0;
+                player_controller_system.action = PlayerAction::Pass;
+            }
+            if keyboard.is_scancode_pressed(Scancode::Q) {
+                frames_since_last_input = 0;
+                player_controller_system.action = PlayerAction::Interact;
+            }
+        } else {
+            frames_since_last_input += 1;
         }
 
         let current_time = Instant::now();

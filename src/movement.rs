@@ -107,6 +107,10 @@ pub fn try_move_towards(
             (0, -1) => Direction::Down,
             (-1, 0) => Direction::Left,
             (1, 0) => Direction::Right,
+            (-1, 1) => Direction::UpLeft,
+            (-1, -1) => Direction::DownLeft,
+            (1, -1) => Direction::DownRight,
+            (1, 1) => Direction::UpRight,
             _ => unreachable!(),
         };
         try_move(moving_entity, direction, world)?

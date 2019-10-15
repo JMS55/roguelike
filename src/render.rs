@@ -104,14 +104,26 @@ impl RenderSystem {
                         .unwrap();
                     self.canvas.copy(&texture, None, dest_rect).unwrap();
                     if let Some(player) = player_data.get(entity) {
-                        let texture = texture_creator
-                            .load_texture("assets/direction_indicator.png")
-                            .unwrap();
+                        let texture = match player.facing_direction {
+                            Direction::Up
+                            | Direction::Down
+                            | Direction::Left
+                            | Direction::Right => "assets/direction_indicator.png",
+                            Direction::UpLeft
+                            | Direction::DownLeft
+                            | Direction::DownRight
+                            | Direction::UpRight => "assets/direction_indicator_diagonal.png",
+                        };
+                        let texture = texture_creator.load_texture(texture).unwrap();
                         let rotation = match player.facing_direction {
                             Direction::Up => 90.0,
                             Direction::Down => 270.0,
                             Direction::Left => 0.0,
                             Direction::Right => 180.0,
+                            Direction::UpLeft => 0.0,
+                            Direction::DownLeft => 270.0,
+                            Direction::DownRight => 180.0,
+                            Direction::UpRight => 90.0,
                         };
                         self.canvas
                             .copy_ex(&texture, None, dest_rect, rotation, None, false, false)

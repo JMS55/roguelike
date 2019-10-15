@@ -28,10 +28,7 @@ impl PlayerControllerSystem {
 
         let player_acted = match self.action {
             PlayerAction::None => false,
-            PlayerAction::Pass => {
-                self.action = PlayerAction::None;
-                true
-            }
+            PlayerAction::Pass => true,
             PlayerAction::Interact => {
                 let is_facing_staircase = {
                     let position_data = world.read_storage::<Position>();
@@ -57,20 +54,22 @@ impl PlayerControllerSystem {
                     }
                     generate_dungeon_system.run(world);
                 }
-                self.action = PlayerAction::None;
                 is_facing_staircase
             }
             PlayerAction::Turn(direction) => {
                 let mut player_data = world.write_storage::<Player>();
                 player_data.get_mut(player_entity).unwrap().facing_direction = direction;
-                self.action = PlayerAction::None;
                 false
             }
             PlayerAction::Move(direction) => {
-                self.action = PlayerAction::Turn(direction);
+                {
+                    let mut player_data = world.write_storage::<Player>();
+                    player_data.get_mut(player_entity).unwrap().facing_direction = direction;
+                }
                 try_move(player_entity, direction, world).is_ok()
             }
         };
+        self.action = PlayerAction::None;
 
         if player_acted {
             {

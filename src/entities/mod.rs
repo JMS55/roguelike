@@ -1,6 +1,6 @@
-mod class1;
+mod layer1;
 
-pub use class1::*;
+pub use layer1::*;
 
 use crate::data::*;
 use rand::Rng;
