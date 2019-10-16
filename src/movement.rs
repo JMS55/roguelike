@@ -1,4 +1,4 @@
-use crate::data::{Direction, Intangible, Position};
+use crate::data::{Direction, Intangible, Position, AI};
 use specs::{Entity, Join, World, WorldExt};
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
@@ -47,9 +47,10 @@ pub fn can_move(entity: Entity, direction: Direction, world: &World) -> bool {
 pub fn pathfind(start: Position, goal: Position, world: &mut World) -> Vec<Position> {
     let position_data = world.read_storage::<Position>();
     let intangible_data = world.read_storage::<Intangible>();
-    let obstacles = (&position_data, !&intangible_data)
+    let ai_data = world.read_storage::<AI>();
+    let obstacles = (&position_data, !&intangible_data, !&ai_data)
         .join()
-        .map(|(position, _)| *position)
+        .map(|(position, _, _)| *position)
         .collect::<HashSet<Position>>();
     let mut frontier = BinaryHeap::new();
     let mut came_from = HashMap::new();
