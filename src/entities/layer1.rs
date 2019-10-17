@@ -1,10 +1,9 @@
-use super::replace_with_staircase_on_death;
 use crate::attack::*;
 use crate::data::*;
 use crate::movement::*;
 use rand::seq::SliceRandom;
 use rand::Rng;
-use specs::{Builder, Entity, Join, World, WorldExt};
+use specs::{Builder, Join, World, WorldExt};
 use std::collections::HashSet;
 
 pub fn create_random_layer1(rarity: Rarity, position: Position, world: &mut World) {
@@ -48,7 +47,7 @@ pub fn create_phase_bat(position: Position, world: &mut World) {
             }
         }))
         .with(position)
-        .with(Attackable::new(6))
+        .with(Attackable::new(6, false))
         .with(Sprite::new("phase_bat"))
         .build();
 }
@@ -68,14 +67,14 @@ pub fn create_danger_spider(position: Position, world: &mut World) {
             }
         }))
         .with(position)
-        .with(Attackable::new(7))
+        .with(Attackable::new(7, false))
         .with(Sprite::new("danger_spider"))
         .build();
 }
 
 pub fn create_pungent_ooze(position: Position, world: &mut World) {
-    let mut attackable = Attackable::new(7);
-    attackable.has_oozing_buff = true;
+    let mut attackable = Attackable::new(7, false);
+    attackable.is_oozing = true;
     world
         .create_entity()
         .with(Name("Pungent Ooze"))
@@ -140,41 +139,14 @@ pub fn create_skeleton_scout(position: Position, world: &mut World) {
             }
         }))
         .with(position)
-        .with(Attackable::new(9))
+        .with(Attackable::new(9, false))
         .with(Sprite::new("skeleton_scout"))
         .build();
 }
 
 pub fn create_volatile_husk(position: Position, world: &mut World) {
-    let mut attackable = Attackable::new(6);
-    attackable.on_death = Some(|ai_entity, _, world| {
-        let ai_position = {
-            let position_data = world.read_storage::<Position>();
-            *position_data.get(ai_entity).unwrap()
-        };
-        let targets = {
-            let attackable_data = world.read_storage::<Attackable>();
-            let position_data = world.read_storage::<Position>();
-            let entities = world.entities();
-            (&entities, &position_data, &attackable_data)
-                .join()
-                .filter(|(_, position, _)| {
-                    position.x - ai_position.x <= 2 && position.y - ai_position.y <= 2
-                })
-                .map(|(entity, _, _)| entity)
-                .collect::<Vec<Entity>>()
-        };
-        for target in targets {
-            damage(6, false, Some(ai_entity), target, world);
-        }
-        let mut message_log = world.fetch_mut::<MessageLog>();
-        message_log.new_message(
-            "Volatile Husk exploded!",
-            MessageColor::White,
-            MessageDisplayLength::Medium,
-        );
-    });
-
+    let mut attackable = Attackable::new(6, false);
+    attackable.explode_on_death = (6, 2);
     world
         .create_entity()
         .with(Name("Volatile Husk"))
@@ -277,14 +249,13 @@ pub fn create_jack_spectre(position: Position, world: &mut World) {
         }))
         .with(AICounter(0))
         .with(position)
-        .with(Attackable::new(7))
+        .with(Attackable::new(7, false))
         .with(Sprite::new("jack_spectre"))
         .build();
 }
 
 pub fn create_king_of_lanterns(position: Position, world: &mut World) {
-    let mut attackable = Attackable::new(47);
-    attackable.on_death = Some(replace_with_staircase_on_death);
+    let attackable = Attackable::new(47, true);
     world
         .create_entity()
         .with(Name("Siro, King of the Lanterns"))
@@ -297,8 +268,7 @@ pub fn create_king_of_lanterns(position: Position, world: &mut World) {
 }
 
 pub fn create_moth_priestess(position: Position, world: &mut World) {
-    let mut attackable = Attackable::new(47);
-    attackable.on_death = Some(replace_with_staircase_on_death);
+    let attackable = Attackable::new(47, true);
     world
         .create_entity()
         .with(Name("Xilphne, The Moth Priestess"))
@@ -317,7 +287,7 @@ pub fn create_moth_worshipper(position: Position, world: &mut World) {
         // TODO
         // .with(AI::new(|ai_entity, world| {}))
         .with(position)
-        .with(Attackable::new(12))
+        .with(Attackable::new(12, false))
         .with(Sprite::new("placeholder"))
         .build();
 }

@@ -50,7 +50,7 @@ impl PlayerControllerSystem {
                             player_attackable.current_health = player_attackable.max_health;
                         }
 
-                        player_attackable.oozed_debuff_stacks = 0;
+                        player_attackable.oozed_stacks = 0;
                     }
                     generate_dungeon_system.run(world);
                 }

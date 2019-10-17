@@ -1,5 +1,6 @@
 use crate::data::*;
-use specs::{Entity, World, WorldExt};
+use crate::entities;
+use specs::{Entity, Join, World, WorldExt};
 
 /// Returns whether or not the target died and the amount of damage dealt
 pub fn damage(
@@ -12,26 +13,24 @@ pub fn damage(
     let target_died = {
         let mut attackable_data = world.write_storage::<Attackable>();
 
-        {
-            let target_attackable = attackable_data.get(target).unwrap();
-            if target_attackable.current_health == 0 {
-                return (true, 0);
-            }
+        let target_attackable = attackable_data.get(target).unwrap();
+        if target_attackable.current_health == 0 {
+            return (true, 0);
         }
 
         if let Some(attacker) = attacker {
             let attacker_attackable = attackable_data.get(attacker).unwrap().clone();
-            let mut target_attackable = attackable_data.get_mut(target).unwrap();
+            let target_attackable = attackable_data.get_mut(target).unwrap();
 
-            if attacker_attackable.has_oozing_buff {
-                damage += target_attackable.oozed_debuff_stacks;
+            if attacker_attackable.is_oozing {
+                damage += target_attackable.oozed_stacks;
                 if is_melee {
-                    target_attackable.oozed_debuff_stacks += 1;
+                    target_attackable.oozed_stacks += 1;
                 }
             }
         }
 
-        let mut target_attackable = attackable_data.get_mut(target).unwrap();
+        let target_attackable = attackable_data.get_mut(target).unwrap();
         target_attackable.current_health = target_attackable
             .current_health
             .checked_sub(damage)
@@ -41,13 +40,68 @@ pub fn damage(
     };
 
     if target_died {
-        let target_on_death = {
-            let attackable_data = world.write_storage::<Attackable>();
-            attackable_data.get(target).unwrap().on_death
+        let (blast_damage, blast_radius) = {
+            let attackable_data = world.read_storage::<Attackable>();
+            let target_attackable = attackable_data.get(target).unwrap();
+            target_attackable.explode_on_death
         };
-        if let Some(target_on_death) = target_on_death {
-            (target_on_death)(target, attacker, world);
+        if blast_damage != 0 && blast_radius != 0 {
+            {
+                let mut message_log = world.fetch_mut::<MessageLog>();
+                let name_data = world.read_storage::<Name>();
+                let target_name = name_data.get(target).unwrap().0;
+                message_log.new_message(
+                    format!("{} exploded!", target_name),
+                    MessageColor::White,
+                    MessageDisplayLength::Medium,
+                );
+            }
+
+            let targets = {
+                let attackable_data = world.read_storage::<Attackable>();
+                let position_data = world.read_storage::<Position>();
+                let entities = world.entities();
+                let target_position = position_data.get(target).unwrap();
+                (&entities, &position_data, &attackable_data)
+                    .join()
+                    .filter(|(_, position, _)| {
+                        position.x - target_position.x <= blast_radius as i16
+                            && position.y - target_position.y <= blast_radius as i16
+                    })
+                    .map(|(entity, _, _)| entity)
+                    .collect::<Vec<Entity>>()
+            };
+            for target in targets {
+                self::damage(blast_damage, false, Some(target), target, world);
+            }
         }
+
+        let target_is_boss = {
+            let attackable_data = world.read_storage::<Attackable>();
+            let target_attackable = attackable_data.get(target).unwrap();
+            target_attackable.is_boss
+        };
+        if target_is_boss {
+            {
+                let mut attackable_data = world.write_storage::<Attackable>();
+                let player_data = world.read_storage::<Player>();
+                let player_attackable = (&mut attackable_data, &player_data)
+                    .join()
+                    .next()
+                    .unwrap()
+                    .0;
+                player_attackable.max_health += 5;
+                player_attackable.current_health = player_attackable.max_health;
+            }
+            {
+                let target_position = {
+                    let position_data = world.read_storage::<Position>();
+                    *position_data.get(target).unwrap()
+                };
+                entities::create_staircase(target_position, world);
+            }
+        }
+
         world.delete_entity(target).unwrap();
     }
 

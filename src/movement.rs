@@ -4,23 +4,10 @@ use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
 pub fn try_move(entity: Entity, direction: Direction, world: &mut World) -> Result<(), ()> {
-    let obstacles;
-    let entity_position;
-    {
-        let position_data = world.read_storage::<Position>();
-        let intangible_data = world.read_storage::<Intangible>();
-        obstacles = (&position_data, !&intangible_data)
-            .join()
-            .map(|(position, _)| *position)
-            .collect::<HashSet<Position>>();
-        entity_position = *position_data.get(entity).unwrap();
-    }
-
-    let new_position = entity_position.offset_by(direction);
-    if !obstacles.contains(&new_position) {
+    if can_move(entity, direction, world) {
         let mut position_data = world.write_storage::<Position>();
         let entity_position = position_data.get_mut(entity).unwrap();
-        *entity_position = new_position;
+        *entity_position = entity_position.offset_by(direction);
         Ok(())
     } else {
         Err(())
@@ -39,7 +26,6 @@ pub fn can_move(entity: Entity, direction: Direction, world: &World) -> bool {
             .collect::<HashSet<Position>>();
         entity_position = *position_data.get(entity).unwrap();
     }
-
     let new_position = entity_position.offset_by(direction);
     !obstacles.contains(&new_position)
 }

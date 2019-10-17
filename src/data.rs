@@ -78,28 +78,30 @@ impl Sprite {
     }
 }
 
-#[derive(Component, Clone)]
+#[derive(Component, Debug, Hash, PartialEq, Eq, Clone)]
 #[storage(BTreeStorage)]
 pub struct Attackable {
     pub current_health: u32,
     pub max_health: u32,
-    pub on_death: Option<fn(Entity, Option<Entity>, &mut World)>,
 
-    pub has_oozing_buff: bool,
+    pub is_boss: bool,
+    pub is_oozing: bool,
+    pub explode_on_death: (u32, u32),
 
-    pub oozed_debuff_stacks: u32,
+    pub oozed_stacks: u32,
 }
 
 impl Attackable {
-    pub fn new(max_health: u32) -> Self {
+    pub fn new(max_health: u32, is_boss: bool) -> Self {
         Self {
             current_health: max_health,
             max_health,
-            on_death: None,
 
-            has_oozing_buff: false,
+            is_boss,
+            is_oozing: false,
+            explode_on_death: (0, 0),
 
-            oozed_debuff_stacks: 0,
+            oozed_stacks: 0,
         }
     }
 }
