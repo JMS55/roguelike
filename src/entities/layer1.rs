@@ -186,52 +186,84 @@ pub fn create_soul_spectre(position: Position, world: &mut World) {
         .create_entity()
         .with(Name("Soul Spectre"))
         .with(AI::new(|ai_entity, world| {
-            let ai_position = {
+            let has_been_attacked = {
+                let mut ai_counter_data = world.write_storage::<AICounter>();
                 let position_data = world.read_storage::<Position>();
-                *position_data.get(ai_entity).unwrap()
-            };
-            let player_position = {
                 let player_data = world.read_storage::<Player>();
-                let position_data = world.read_storage::<Position>();
-                *(&player_data, &position_data).join().next().unwrap().1
-            };
-            let spawn_discordant_soul = {
-                let rng = &mut world.fetch_mut::<RNG>().0;
-                rng.gen_ratio(1, 12)
-            };
-            if spawn_discordant_soul && ai_position.distance_from(player_position) <= 6 {
-                let obstacles = {
-                    let position_data = world.read_storage::<Position>();
-                    let intangible_data = world.read_storage::<Intangible>();
-                    (&position_data, !&intangible_data)
-                        .join()
-                        .map(|(position, _)| *position)
-                        .collect::<HashSet<Position>>()
-                };
-                for direction in &[
-                    Direction::Up,
-                    Direction::Down,
-                    Direction::Left,
-                    Direction::Right,
-                ] {
-                    let spawn_position = ai_position.offset_by(*direction);
-                    if !obstacles.contains(&spawn_position) {
-                        create_discordant_soul(spawn_position, world);
-                        break;
-                    }
+                let attackable_data = world.read_storage::<Attackable>();
+                let ai_counter = ai_counter_data.get_mut(ai_entity).unwrap();
+                let ai_position = position_data.get(ai_entity).unwrap();
+                let ai_attackable = attackable_data.get(ai_entity).unwrap();
+                let player_position = (&player_data, &position_data).join().next().unwrap().1;
+
+                if *ai_counter == AICounter(0) && ai_position.distance_from(*player_position) <= 6 {
+                    let mut message_log = world.fetch_mut::<MessageLog>();
+                    message_log.new_message(
+                        "Hello there. May I have your soul?",
+                        MessageColor::White,
+                        MessageDisplayLength::Medium,
+                    );
+                    *ai_counter = AICounter(1);
                 }
-            } else {
-                let player_entity = {
-                    let player_data = world.read_storage::<Player>();
-                    let entities = world.entities();
-                    (&entities, &player_data).join().next().unwrap().0
+
+                if ai_attackable.current_health != ai_attackable.max_health
+                    && ai_position.distance_from(*player_position) <= 6
+                {
+                    if *ai_counter != AICounter(2)
+                    {
+                    let mut message_log = world.fetch_mut::<MessageLog>();
+                    message_log.new_message("Wow, that was rude. All I was asking for was your immortal soul, no need to overreact. Now I'm ANRGY!", MessageColor::Red, MessageDisplayLength::Medium);
+                    }
+                    *ai_counter = AICounter(2);
+                }
+
+                *ai_counter == AICounter(2)
+            };
+
+            if has_been_attacked {
+                let spawn_discordant_soul = {
+                    let rng = &mut world.fetch_mut::<RNG>().0;
+                    rng.gen_ratio(1, 12)
                 };
-                if try_attack(5, 1, 1, ai_entity, player_entity, world).is_err() {
-                    let _ = try_move_towards(ai_entity, player_entity, world);
-                    let _ = try_move_towards(ai_entity, player_entity, world);
+                if spawn_discordant_soul {
+                    let ai_position = {
+                        let position_data = world.read_storage::<Position>();
+                        *position_data.get(ai_entity).unwrap()
+                    };
+                    let obstacles = {
+                        let position_data = world.read_storage::<Position>();
+                        let intangible_data = world.read_storage::<Intangible>();
+                        (&position_data, !&intangible_data)
+                            .join()
+                            .map(|(position, _)| *position)
+                            .collect::<HashSet<Position>>()
+                    };
+                    for direction in &[
+                        Direction::Up,
+                        Direction::Down,
+                        Direction::Left,
+                        Direction::Right,
+                    ] {
+                        let spawn_position = ai_position.offset_by(*direction);
+                        if !obstacles.contains(&spawn_position) {
+                            create_discordant_soul(spawn_position, world);
+                            break;
+                        }
+                    }
+                } else {
+                    let player_entity = {
+                        let player_data = world.read_storage::<Player>();
+                        let entities = world.entities();
+                        (&entities, &player_data).join().next().unwrap().0
+                    };
+                    if try_attack(5, 1, 1, ai_entity, player_entity, world).is_err() {
+                        let _ = try_move_towards(ai_entity, player_entity, world);
+                        let _ = try_move_towards(ai_entity, player_entity, world);
+                    }
                 }
             }
         }))
+        .with(AICounter(0))
         .with(position)
         .with(Attackable::new(16, 50, false))
         .with(Sprite::new("soul_spectre"))
