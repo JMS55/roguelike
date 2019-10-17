@@ -30,6 +30,34 @@ pub fn damage(
             }
         }
 
+        {
+            let target_attackable = attackable_data.get(target).unwrap();
+            let (lower_spawn_times_health_threshold, lower_spawn_times_by_turns) =
+                target_attackable.lower_spawn_times;
+            if lower_spawn_times_health_threshold != 0.0 && lower_spawn_times_by_turns != 0 {
+                if target_attackable.current_health as f32 / target_attackable.max_health as f32
+                    <= lower_spawn_times_health_threshold
+                {
+                    let mut spawner_data = world.write_storage::<Spawner>();
+                    for spawner in (&mut spawner_data).join() {
+                        spawner.turns_per_spawn = spawner
+                            .turns_per_spawn
+                            .checked_sub(lower_spawn_times_by_turns)
+                            .unwrap_or(0);
+                        if spawner.turns_per_spawn < 10 {
+                            spawner.turns_per_spawn = 10;
+                        }
+                    }
+                    let mut message_log = world.fetch_mut::<MessageLog>();
+                    message_log.new_message(
+                        "The air around you feels more... dangerous...",
+                        MessageColor::White,
+                        MessageDisplayLength::Short,
+                    );
+                }
+            }
+        }
+
         let target_attackable = attackable_data.get_mut(target).unwrap();
         target_attackable.current_health = target_attackable
             .current_health
@@ -100,6 +128,14 @@ pub fn damage(
                 };
                 entities::create_staircase(target_position, world);
             }
+        }
+
+        {
+            let mut player_data = world.write_storage::<Player>();
+            let attackable_data = world.read_storage::<Attackable>();
+            let mut player = (&mut player_data).join().next().unwrap();
+            let target_attackable = attackable_data.get(target).unwrap();
+            player.crystals += target_attackable.crystals_dropped_on_death;
         }
 
         world.delete_entity(target).unwrap();

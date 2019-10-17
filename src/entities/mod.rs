@@ -13,7 +13,7 @@ pub fn create_player(world: &mut World) {
         .with(Name("Player"))
         .with(Player::new())
         .with(Position::new(0, 0))
-        .with(Attackable::new(20, false))
+        .with(Attackable::new(30, 0, false))
         .with(Sprite::new("player"))
         .build();
 }

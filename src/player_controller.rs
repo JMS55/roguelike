@@ -37,7 +37,11 @@ impl PlayerControllerSystem {
                     let new_position = player_position.offset_by(player.facing_direction);
                     (&position_data, &staircase_data)
                         .join()
-                        .any(|(position, _)| position == &new_position)
+                        .any(|(position, _)| {
+                            position == &new_position
+                                && ((player_position.x - position.x != 0)
+                                    != (player_position.y - position.y != 0))
+                        })
                 };
                 if is_facing_staircase {
                     {

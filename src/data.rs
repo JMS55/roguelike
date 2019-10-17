@@ -78,28 +78,34 @@ impl Sprite {
     }
 }
 
-#[derive(Component, Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(Component, Debug, PartialEq, Clone)]
 #[storage(BTreeStorage)]
 pub struct Attackable {
     pub current_health: u32,
     pub max_health: u32,
 
     pub is_boss: bool,
+    pub crystals_dropped_on_death: u32,
+
     pub is_oozing: bool,
-    pub explode_on_death: (u32, u32),
+    pub explode_on_death: (u32, u32),  // Damage, Radius
+    pub lower_spawn_times: (f32, u32), // Health percent threshold, Turns to lower by
 
     pub oozed_stacks: u32,
 }
 
 impl Attackable {
-    pub fn new(max_health: u32, is_boss: bool) -> Self {
+    pub fn new(max_health: u32, crystals_dropped_on_death: u32, is_boss: bool) -> Self {
         Self {
             current_health: max_health,
             max_health,
 
             is_boss,
+            crystals_dropped_on_death,
+
             is_oozing: false,
             explode_on_death: (0, 0),
+            lower_spawn_times: (0.0, 0),
 
             oozed_stacks: 0,
         }
@@ -138,7 +144,7 @@ impl Player {
     pub fn new() -> Self {
         Self {
             facing_direction: Direction::Up,
-            crystals: 500,
+            crystals: 200,
             turns_taken: 0,
         }
     }
@@ -152,7 +158,7 @@ pub struct Staircase {}
 #[storage(BTreeStorage)]
 pub struct Spawner {
     turns_since_last_spawn: u32,
-    turns_per_spawn: u32,
+    pub turns_per_spawn: u32,
 }
 
 impl Spawner {

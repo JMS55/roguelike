@@ -12,8 +12,8 @@ pub fn create_random_layer1(rarity: Rarity, position: Position, world: &mut Worl
         let choices: Vec<fn(Position, &mut World)> = match rarity {
             Rarity::Common => vec![create_phase_bat, create_danger_spider, create_pungent_ooze],
             Rarity::Uncommon => vec![create_skeleton_scout, create_volatile_husk],
-            Rarity::Rare => vec![create_jack_spectre],
-            Rarity::Epic => vec![create_king_of_lanterns, create_moth_priestess],
+            Rarity::Rare => vec![create_arcane_ooze, create_soul_spectre],
+            Rarity::Epic => vec![create_siro_king_of_hell, create_xilphene_the_moth_priestess],
         };
         *choices.choose(rng).unwrap()
     };
@@ -35,7 +35,7 @@ pub fn create_phase_bat(position: Position, world: &mut World) {
                 Ok(false) => {
                     let attack_twice = {
                         let rng = &mut world.fetch_mut::<RNG>().0;
-                        rng.gen_ratio(1, 7)
+                        rng.gen_ratio(1, 5)
                     };
                     if attack_twice {
                         let _ = try_attack(2, 1, 1, ai_entity, player_entity, world);
@@ -47,12 +47,14 @@ pub fn create_phase_bat(position: Position, world: &mut World) {
             }
         }))
         .with(position)
-        .with(Attackable::new(6, false))
+        .with(Attackable::new(8, 20, false))
         .with(Sprite::new("phase_bat"))
         .build();
 }
 
 pub fn create_danger_spider(position: Position, world: &mut World) {
+    let mut attackable = Attackable::new(11, 20, false);
+    attackable.lower_spawn_times = (0.5, 3);
     world
         .create_entity()
         .with(Name("Danger! Spider"))
@@ -67,13 +69,13 @@ pub fn create_danger_spider(position: Position, world: &mut World) {
             }
         }))
         .with(position)
-        .with(Attackable::new(7, false))
+        .with(attackable)
         .with(Sprite::new("danger_spider"))
         .build();
 }
 
 pub fn create_pungent_ooze(position: Position, world: &mut World) {
-    let mut attackable = Attackable::new(7, false);
+    let mut attackable = Attackable::new(10, 20, false);
     attackable.is_oozing = true;
     world
         .create_entity()
@@ -84,7 +86,7 @@ pub fn create_pungent_ooze(position: Position, world: &mut World) {
                 let entities = world.entities();
                 (&entities, &player_data).join().next().unwrap().0
             };
-            if try_attack(3, 1, 1, ai_entity, player_entity, world).is_err() {
+            if try_attack(4, 1, 1, ai_entity, player_entity, world).is_err() {
                 let _ = try_move_towards(ai_entity, player_entity, world);
             }
         }))
@@ -133,19 +135,19 @@ pub fn create_skeleton_scout(position: Position, world: &mut World) {
                     }
                     let _ = try_move(ai_entity, direction_to_move, world);
                 }
-                let _ = try_attack(5, 1, 2, ai_entity, player_entity, world);
+                let _ = try_attack(4, 1, 2, ai_entity, player_entity, world);
             } else {
                 let _ = try_move_towards(ai_entity, player_entity, world);
             }
         }))
         .with(position)
-        .with(Attackable::new(9, false))
+        .with(Attackable::new(12, 30, false))
         .with(Sprite::new("skeleton_scout"))
         .build();
 }
 
 pub fn create_volatile_husk(position: Position, world: &mut World) {
-    let mut attackable = Attackable::new(6, false);
+    let mut attackable = Attackable::new(9, 30, false);
     attackable.explode_on_death = (6, 2);
     world
         .create_entity()
@@ -166,128 +168,118 @@ pub fn create_volatile_husk(position: Position, world: &mut World) {
         .build();
 }
 
-pub fn create_jack_spectre(position: Position, world: &mut World) {
+pub fn create_arcane_ooze(position: Position, world: &mut World) {
     world
         .create_entity()
-        .with(Name("Jack Spectre"))
+        .with(Name("Arcane Ooze"))
+        .with(AI::new(|ai_entity, world| {
+            // TODO
+        }))
+        .with(position)
+        .with(Attackable::new(10, 50, false))
+        .with(Sprite::new("arcane_ooze"))
+        .build();
+}
+
+pub fn create_soul_spectre(position: Position, world: &mut World) {
+    world
+        .create_entity()
+        .with(Name("Soul Spectre"))
+        .with(AI::new(|ai_entity, world| {
+            let ai_position = {
+                let position_data = world.read_storage::<Position>();
+                *position_data.get(ai_entity).unwrap()
+            };
+            let player_position = {
+                let player_data = world.read_storage::<Player>();
+                let position_data = world.read_storage::<Position>();
+                *(&player_data, &position_data).join().next().unwrap().1
+            };
+            let spawn_discordant_soul = {
+                let rng = &mut world.fetch_mut::<RNG>().0;
+                rng.gen_ratio(1, 12)
+            };
+            if spawn_discordant_soul && ai_position.distance_from(player_position) <= 6 {
+                let obstacles = {
+                    let position_data = world.read_storage::<Position>();
+                    let intangible_data = world.read_storage::<Intangible>();
+                    (&position_data, !&intangible_data)
+                        .join()
+                        .map(|(position, _)| *position)
+                        .collect::<HashSet<Position>>()
+                };
+                for direction in &[
+                    Direction::Up,
+                    Direction::Down,
+                    Direction::Left,
+                    Direction::Right,
+                ] {
+                    let spawn_position = ai_position.offset_by(*direction);
+                    if !obstacles.contains(&spawn_position) {
+                        create_discordant_soul(spawn_position, world);
+                        break;
+                    }
+                }
+            } else {
+                let player_entity = {
+                    let player_data = world.read_storage::<Player>();
+                    let entities = world.entities();
+                    (&entities, &player_data).join().next().unwrap().0
+                };
+                if try_attack(5, 1, 1, ai_entity, player_entity, world).is_err() {
+                    let _ = try_move_towards(ai_entity, player_entity, world);
+                    let _ = try_move_towards(ai_entity, player_entity, world);
+                }
+            }
+        }))
+        .with(position)
+        .with(Attackable::new(16, 50, false))
+        .with(Sprite::new("soul_spectre"))
+        .build();
+}
+
+pub fn create_discordant_soul(position: Position, world: &mut World) {
+    world
+        .create_entity()
+        .with(Name("Discordant Soul"))
         .with(AI::new(|ai_entity, world| {
             let player_entity = {
                 let player_data = world.read_storage::<Player>();
                 let entities = world.entities();
                 (&entities, &player_data).join().next().unwrap().0
             };
-            let mut attacked_this_turn = {
-                let ai_counter_data = world.read_storage::<AICounter>();
-                ai_counter_data.get(ai_entity).unwrap().0 == 1
-            };
-            for _ in 0..2 {
-                if can_attack(1, 1, ai_entity, player_entity, world) {
-                    if attacked_this_turn {
-                        let (ai_position, player_position) = {
-                            let position_data = world.read_storage::<Position>();
-                            let ai_position = position_data.get(ai_entity).unwrap();
-                            let player_position = position_data.get(player_entity).unwrap();
-                            (*ai_position, *player_position)
-                        };
-                        let distance_from_player = player_position.distance_from(ai_position);
-                        for direction in &[
-                            Direction::Up,
-                            Direction::Down,
-                            Direction::Left,
-                            Direction::Right,
-                            Direction::UpLeft,
-                            Direction::DownLeft,
-                            Direction::DownRight,
-                            Direction::UpRight,
-                        ] {
-                            let new_ai_position = ai_position.offset_by(*direction);
-                            if can_move(ai_entity, *direction, &world)
-                                && player_position.distance_from(new_ai_position)
-                                    > distance_from_player
-                            {
-                                let _ = try_move(ai_entity, *direction, world);
-                                break;
-                            }
-                        }
-
-                        let spawn_creature = {
-                            let rng = &mut world.fetch_mut::<RNG>().0;
-                            rng.gen_ratio(1, 6)
-                        };
-                        if spawn_creature {
-                            let obstacles = {
-                                let position_data = world.read_storage::<Position>();
-                                let intangible_data = world.read_storage::<Intangible>();
-                                (&position_data, !&intangible_data)
-                                    .join()
-                                    .map(|(position, _)| *position)
-                                    .collect::<HashSet<Position>>()
-                            };
-                            for direction in &[
-                                Direction::Up,
-                                Direction::Down,
-                                Direction::Left,
-                                Direction::Right,
-                            ] {
-                                let spawn_position = ai_position.offset_by(*direction);
-                                if !obstacles.contains(&spawn_position) {
-                                    create_random_layer1(Rarity::Common, spawn_position, world);
-                                    break;
-                                }
-                            }
-                        }
-                    } else {
-                        let _ = try_attack(6, 1, 1, ai_entity, player_entity, world);
-                        attacked_this_turn = true;
-                    }
-                } else {
-                    let _ = try_move_towards(ai_entity, player_entity, world);
-                }
+            if try_attack(3, 1, 1, ai_entity, player_entity, world).is_err() {
+                let _ = try_move_towards(ai_entity, player_entity, world);
             }
-            let mut ai_counter_data = world.write_storage::<AICounter>();
-            let _ = ai_counter_data.insert(ai_entity, AICounter(0));
         }))
-        .with(AICounter(0))
         .with(position)
-        .with(Attackable::new(7, false))
-        .with(Sprite::new("jack_spectre"))
+        .with(Attackable::new(6, 5, false))
+        .with(Sprite::new("discordant_soul"))
         .build();
 }
 
-pub fn create_king_of_lanterns(position: Position, world: &mut World) {
-    let attackable = Attackable::new(47, true);
+pub fn create_siro_king_of_hell(position: Position, world: &mut World) {
     world
         .create_entity()
-        .with(Name("Siro, King of the Lanterns"))
-        // TODO
-        // .with(AI::new(|ai_entity, world| {}))
-        .with(position) // TODO: generate staircase on death
-        .with(attackable)
+        .with(Name("Siro, King of Hell"))
+        .with(AI::new(|ai_entity, world| {
+            // TODO
+        }))
+        .with(position)
+        .with(Attackable::new(50, 200, true))
         .with(Sprite::new("placeholder"))
         .build();
 }
 
-pub fn create_moth_priestess(position: Position, world: &mut World) {
-    let attackable = Attackable::new(47, true);
+pub fn create_xilphene_the_moth_priestess(position: Position, world: &mut World) {
     world
         .create_entity()
-        .with(Name("Xilphne, The Moth Priestess"))
-        // TODO
-        // .with(AI::new(|ai_entity, world| {}))
+        .with(Name("Xilphene, The Moth_ Priestes"))
+        .with(AI::new(|ai_entity, world| {
+            // TODO
+        }))
         .with(position)
-        .with(attackable)
-        .with(Sprite::new("placeholder"))
-        .build();
-}
-
-pub fn create_moth_worshipper(position: Position, world: &mut World) {
-    world
-        .create_entity()
-        .with(Name("Moth Worshipper"))
-        // TODO
-        // .with(AI::new(|ai_entity, world| {}))
-        .with(position)
-        .with(Attackable::new(12, false))
+        .with(Attackable::new(40, 200, true))
         .with(Sprite::new("placeholder"))
         .build();
 }
