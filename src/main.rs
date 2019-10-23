@@ -46,7 +46,7 @@ fn main() {
     let mut generate_dungeon_system = GenerateDungeonSystem::new();
     let mut render_system = RenderSystem::new(&sdl_context);
 
-    let mut frames_since_last_input = 4;
+    let mut frames_since_last_input = 5;
     let mut time_accumulator = Duration::from_secs(0);
     let mut previous_time = Instant::now();
     'game_loop: loop {
@@ -61,7 +61,7 @@ fn main() {
         if keyboard.is_scancode_pressed(Scancode::Escape) {
             break 'game_loop;
         }
-        if game_state == GameState::PlayerTurn && frames_since_last_input >= 4 {
+        if game_state == GameState::PlayerTurn && frames_since_last_input >= 5 {
             let mut keystate = (0, 0, true);
             if keyboard.is_scancode_pressed(Scancode::LShift) {
                 frames_since_last_input = 0;
