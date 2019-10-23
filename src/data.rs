@@ -1,3 +1,4 @@
+use crate::items;
 use rand::SeedableRng;
 use rand_pcg::Pcg64;
 use specs::storage::BTreeStorage;
@@ -137,17 +138,29 @@ pub struct Intangible {}
 pub struct Player {
     pub facing_direction: Direction,
     pub crystals: u32,
+    pub inventory: [Option<Entity>; 16],
     pub turns_taken: u32,
 }
 
 impl Player {
-    pub fn new() -> Self {
+    pub fn new(world: &mut World) -> Self {
+        let mut inventory = [None; 16];
+        inventory[0] = Some(items::create_makeshift_dagger(None, world));
         Self {
             facing_direction: Direction::Up,
             crystals: 200,
+            inventory,
             turns_taken: 0,
         }
     }
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
+pub enum ItemSlot {
+    One,
+    Two,
+    Three,
+    Four,
 }
 
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
@@ -177,6 +190,22 @@ impl Spawner {
             true
         } else {
             false
+        }
+    }
+}
+
+#[derive(Component, Copy, Clone)]
+#[storage(BTreeStorage)]
+pub struct Item {
+    pub crystals_per_use: u32,
+    pub try_use: fn(&mut World) -> Result<(), ()>,
+}
+
+impl Item {
+    pub fn new(crystals_per_use: u32, try_use: fn(&mut World) -> Result<(), ()>) -> Self {
+        Self {
+            crystals_per_use,
+            try_use,
         }
     }
 }

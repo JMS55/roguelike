@@ -26,7 +26,7 @@ impl GenerateDungeonSystem {
 
 impl GenerateDungeonSystem {
     pub fn run(&mut self, world: &mut World) {
-        let mut non_player_entities = Vec::new();
+        let mut delete_entities = Vec::new();
         {
             let entities = world.entities();
             let mut player_data = world.write_storage::<Player>();
@@ -40,13 +40,20 @@ impl GenerateDungeonSystem {
             *player_position = Position::new(0, 0);
             player.turns_taken = 0;
 
+            let mut keep_entities = HashSet::new();
+            keep_entities.insert(player_entity);
+            for item_entity in &player.inventory {
+                if let Some(item_entity) = item_entity {
+                    keep_entities.insert(*item_entity);
+                }
+            }
             for entity in (&entities).join() {
-                if entity != player_entity {
-                    non_player_entities.push(entity);
+                if !keep_entities.contains(&entity) {
+                    delete_entities.push(entity);
                 }
             }
         }
-        for entity in non_player_entities {
+        for entity in delete_entities {
             world.delete_entity(entity).unwrap();
         }
 

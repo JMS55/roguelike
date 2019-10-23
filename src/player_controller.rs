@@ -1,4 +1,4 @@
-use crate::data::{Attackable, Direction, GameState, Player, Position, Staircase};
+use crate::data::{Attackable, Direction, GameState, Item, ItemSlot, Player, Position, Staircase};
 use crate::generate_dungeon::GenerateDungeonSystem;
 use crate::movement::try_move;
 use specs::{Join, World, WorldExt};
@@ -72,6 +72,32 @@ impl PlayerControllerSystem {
                 }
                 try_move(player_entity, direction, world).is_ok()
             }
+            PlayerAction::UseItem(item_slot) => {
+                let inventory_index = match item_slot {
+                    ItemSlot::One => 0,
+                    ItemSlot::Two => 1,
+                    ItemSlot::Three => 2,
+                    ItemSlot::Four => 3,
+                };
+                if let Some(item) = player.inventory[inventory_index] {
+                    let item = {
+                        let item_data = world.read_storage::<Item>();
+                        *item_data.get(item).unwrap()
+                    };
+                    let attack_succeeded = (item.try_use)(world).is_ok();
+                    if attack_succeeded {
+                        let mut player_data = world.write_storage::<Player>();
+                        let player = player_data.get_mut(player_entity).unwrap();
+                        player.crystals = player
+                            .crystals
+                            .checked_sub(item.crystals_per_use)
+                            .unwrap_or(0);
+                    }
+                    attack_succeeded
+                } else {
+                    false
+                }
+            }
         };
         self.action = PlayerAction::None;
 
@@ -93,6 +119,7 @@ pub enum PlayerAction {
     Interact,
     Turn(Direction),
     Move(Direction),
+    UseItem(ItemSlot),
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]

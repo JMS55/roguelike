@@ -8,10 +8,11 @@ use rand_pcg::Pcg64;
 use specs::{Builder, World, WorldExt};
 
 pub fn create_player(world: &mut World) {
+    let player = Player::new(world);
     world
         .create_entity()
         .with(Name("Player"))
-        .with(Player::new())
+        .with(player)
         .with(Position::new(0, 0))
         .with(Attackable::new(30, 0, false))
         .with(Sprite::new("player"))

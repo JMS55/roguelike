@@ -223,7 +223,7 @@ pub fn create_soul_spectre(position: Position, world: &mut World) {
             if has_been_attacked {
                 let spawn_discordant_soul = {
                     let rng = &mut world.fetch_mut::<RNG>().0;
-                    rng.gen_ratio(1, 12)
+                    rng.gen_ratio(1, 6)
                 };
                 if spawn_discordant_soul {
                     let ai_position = {

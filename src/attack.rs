@@ -52,7 +52,7 @@ pub fn damage(
                     message_log.new_message(
                         "The air around you feels more... dangerous...",
                         MessageColor::White,
-                        MessageDisplayLength::Short,
+                        MessageDisplayLength::Medium,
                     );
                 }
             }
@@ -194,6 +194,34 @@ pub fn try_attack(
     }
 }
 
+#[macro_export]
+macro_rules! try_basic_weapon {
+    ($damage:expr, $min_range:expr, $max_range:expr) => {
+        |world| {
+            if let Some(target_entity) =
+                crate::attack::player_can_attack($min_range, $max_range, world)
+            {
+                let player_entity = {
+                    let entities = world.entities();
+                    let player_data = world.read_storage::<Player>();
+                    (&entities, &player_data).join().next().unwrap().0
+                };
+                crate::attack::try_attack(
+                    $damage,
+                    $min_range,
+                    $max_range,
+                    player_entity,
+                    target_entity,
+                    world,
+                )
+                .map(|_| ())
+            } else {
+                Err(())
+            }
+        }
+    };
+}
+
 pub fn can_attack(
     minimum_range: u32,
     maximum_range: u32,
@@ -211,4 +239,43 @@ pub fn can_attack(
     let gap = x_gap + y_gap;
 
     is_straight_path && gap >= minimum_range && gap <= maximum_range
+}
+
+pub fn player_can_attack(minimum_range: u32, maximum_range: u32, world: &World) -> Option<Entity> {
+    let entities = world.entities();
+    let player_data = world.read_storage::<Player>();
+    let position_data = world.read_storage::<Position>();
+    let intangible_data = world.read_storage::<Intangible>();
+    let attackable_data = world.read_storage::<Attackable>();
+    let (player, player_position) = (&player_data, &position_data).join().next().unwrap();
+
+    for range in minimum_range..=maximum_range {
+        let mut offset = match player.facing_direction {
+            Direction::Up => Position::new(0, 1),
+            Direction::Down => Position::new(0, -1),
+            Direction::Left => Position::new(-1, 0),
+            Direction::Right => Position::new(1, 0),
+            _ => Position::new(0, 0),
+        };
+        offset.x *= range as i16;
+        offset.y *= range as i16;
+        let target_position =
+            Position::new(player_position.x + offset.x, player_position.y + offset.y);
+
+        let target_entity = (
+            &entities,
+            &position_data,
+            !&intangible_data,
+            &attackable_data,
+            !&player_data,
+        )
+            .join()
+            .find(|(_, position, _, _, _)| position == &&target_position)
+            .map(|(entity, _, _, _, _)| entity);
+        if target_entity.is_some() {
+            return target_entity;
+        }
+    }
+
+    None
 }

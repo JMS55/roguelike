@@ -4,6 +4,7 @@ mod drain_crystals;
 mod enemy_controller;
 mod entities;
 mod generate_dungeon;
+mod items;
 mod movement;
 mod player_controller;
 mod render;
@@ -37,6 +38,7 @@ fn main() {
     world.register::<Player>();
     world.register::<Staircase>();
     world.register::<Spawner>();
+    world.register::<Item>();
     world.insert(GameState::NewGame);
     world.insert(MessageLog::new());
     world.insert(RNG::new());
@@ -110,6 +112,22 @@ fn main() {
             if keyboard.is_scancode_pressed(Scancode::Q) {
                 frames_since_last_input = 0;
                 player_controller_system.action = PlayerAction::Interact;
+            }
+            if keyboard.is_scancode_pressed(Scancode::Num1) {
+                frames_since_last_input = 0;
+                player_controller_system.action = PlayerAction::UseItem(ItemSlot::One);
+            }
+            if keyboard.is_scancode_pressed(Scancode::Num2) {
+                frames_since_last_input = 0;
+                player_controller_system.action = PlayerAction::UseItem(ItemSlot::Two);
+            }
+            if keyboard.is_scancode_pressed(Scancode::Num3) {
+                frames_since_last_input = 0;
+                player_controller_system.action = PlayerAction::UseItem(ItemSlot::Three);
+            }
+            if keyboard.is_scancode_pressed(Scancode::Num4) {
+                frames_since_last_input = 0;
+                player_controller_system.action = PlayerAction::UseItem(ItemSlot::Four);
             }
         } else {
             frames_since_last_input += 1;
