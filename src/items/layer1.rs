@@ -23,7 +23,7 @@ pub fn create_jump_saber(item_position: Option<Position>, world: &mut World) -> 
                     }
                 };
                 if let Some(player_entity) = player_entity {
-                    return try_attack(8, 1, 1, player_entity, target_entity, world).map(|_| ());
+                    try_attack(8, 1, 1, player_entity, target_entity, world).map(|_| ())
                 } else {
                     Err(())
                 }

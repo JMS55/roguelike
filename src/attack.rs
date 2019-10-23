@@ -34,9 +34,11 @@ pub fn damage(
             let target_attackable = attackable_data.get(target).unwrap();
             let (lower_spawn_times_health_threshold, lower_spawn_times_by_turns) =
                 target_attackable.lower_spawn_times;
-            if lower_spawn_times_health_threshold != 0.0 && lower_spawn_times_by_turns != 0 {
-                if target_attackable.current_health as f32 / target_attackable.max_health as f32
+            if lower_spawn_times_health_threshold != 0.0
+                && lower_spawn_times_by_turns != 0
+                && target_attackable.current_health as f32 / target_attackable.max_health as f32
                     <= lower_spawn_times_health_threshold
+            {
                 {
                     let mut spawner_data = world.write_storage::<Spawner>();
                     for spawner in (&mut spawner_data).join() {
@@ -192,34 +194,6 @@ pub fn try_attack(
     } else {
         Err(())
     }
-}
-
-#[macro_export]
-macro_rules! try_basic_weapon {
-    ($damage:expr, $min_range:expr, $max_range:expr) => {
-        |world| {
-            if let Some(target_entity) =
-                crate::attack::player_can_attack($min_range, $max_range, world)
-            {
-                let player_entity = {
-                    let entities = world.entities();
-                    let player_data = world.read_storage::<Player>();
-                    (&entities, &player_data).join().next().unwrap().0
-                };
-                crate::attack::try_attack(
-                    $damage,
-                    $min_range,
-                    $max_range,
-                    player_entity,
-                    target_entity,
-                    world,
-                )
-                .map(|_| ())
-            } else {
-                Err(())
-            }
-        }
-    };
 }
 
 pub fn can_attack(

@@ -60,16 +60,18 @@ pub fn pathfind(start: Position, goal: Position, world: &mut World) -> Vec<Posit
         }
     }
 
-    let mut path = Vec::with_capacity(start.distance_from(goal) as usize);
     if let Some(last_node) = last_node {
+        let mut path = Vec::with_capacity(start.distance_from(goal) as usize);
         let mut last_node = last_node.position;
         while let Some(next_node) = came_from.get(&last_node) {
             path.push(last_node);
             last_node = *next_node;
         }
         path.reverse();
+        return path;
     }
-    path
+
+    Vec::with_capacity(0)
 }
 
 pub fn try_move_towards(
