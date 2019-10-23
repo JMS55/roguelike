@@ -84,8 +84,8 @@ impl PlayerControllerSystem {
                         let item_data = world.read_storage::<Item>();
                         *item_data.get(item).unwrap()
                     };
-                    let attack_succeeded = (item.try_use)(world).is_ok();
-                    if attack_succeeded {
+                    let item_succeeded = (item.try_use)(world).is_ok();
+                    if item_succeeded {
                         let mut player_data = world.write_storage::<Player>();
                         let player = player_data.get_mut(player_entity).unwrap();
                         player.crystals = player
@@ -93,7 +93,7 @@ impl PlayerControllerSystem {
                             .checked_sub(item.crystals_per_use)
                             .unwrap_or(0);
                     }
-                    attack_succeeded
+                    item_succeeded
                 } else {
                     false
                 }
