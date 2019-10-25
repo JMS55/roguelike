@@ -23,7 +23,7 @@ pub fn create_jump_saber(item_position: Option<Position>, world: &mut World) -> 
                     }
                 };
                 if let Some(player_entity) = player_entity {
-                    try_attack(8, 1, 1, player_entity, target_entity, world).map(|_| ())
+                    try_attack(8, true, 1, 1, player_entity, target_entity, world).map(|_| ())
                 } else {
                     Err(())
                 }
@@ -48,7 +48,7 @@ pub fn create_twister_staff(item_position: Option<Position>, world: &mut World) 
                     let player_data = world.read_storage::<Player>();
                     (&entities, &player_data).join().next().unwrap().0
                 };
-                let attack_result = try_attack(8, 1, 2, player_entity, target_entity, world);
+                let attack_result = try_attack(8, false, 1, 2, player_entity, target_entity, world);
                 match attack_result {
                     Ok(false) => {
                         let player_facing_direction = {

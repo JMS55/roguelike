@@ -30,7 +30,7 @@ pub fn create_phase_bat(position: Position, world: &mut World) {
                 let entities = world.entities();
                 (&entities, &player_data).join().next().unwrap().0
             };
-            match try_attack(3, 1, 1, ai_entity, player_entity, world) {
+            match try_attack(3, true, 1, 1, ai_entity, player_entity, world) {
                 Ok(true) => {}
                 Ok(false) => {
                     let attack_twice = {
@@ -38,7 +38,7 @@ pub fn create_phase_bat(position: Position, world: &mut World) {
                         rng.gen_ratio(1, 5)
                     };
                     if attack_twice {
-                        let _ = try_attack(2, 1, 1, ai_entity, player_entity, world);
+                        let _ = try_attack(2, true, 1, 1, ai_entity, player_entity, world);
                     }
                 }
                 Err(_) => {
@@ -64,7 +64,7 @@ pub fn create_danger_spider(position: Position, world: &mut World) {
                 let entities = world.entities();
                 (&entities, &player_data).join().next().unwrap().0
             };
-            if try_attack(5, 1, 1, ai_entity, player_entity, world).is_err() {
+            if try_attack(5, true, 1, 1, ai_entity, player_entity, world).is_err() {
                 let _ = try_move_towards(ai_entity, player_entity, world);
             }
         }))
@@ -86,7 +86,7 @@ pub fn create_pungent_ooze(position: Position, world: &mut World) {
                 let entities = world.entities();
                 (&entities, &player_data).join().next().unwrap().0
             };
-            if try_attack(4, 1, 1, ai_entity, player_entity, world).is_err() {
+            if try_attack(4, true, 1, 1, ai_entity, player_entity, world).is_err() {
                 let _ = try_move_towards(ai_entity, player_entity, world);
             }
         }))
@@ -135,7 +135,7 @@ pub fn create_skeleton_scout(position: Position, world: &mut World) {
                     }
                     let _ = try_move(ai_entity, direction_to_move, world);
                 }
-                let _ = try_attack(4, 1, 2, ai_entity, player_entity, world);
+                let _ = try_attack(4, false, 1, 2, ai_entity, player_entity, world);
             } else {
                 let _ = try_move_towards(ai_entity, player_entity, world);
             }
@@ -158,7 +158,7 @@ pub fn create_volatile_husk(position: Position, world: &mut World) {
                 let entities = world.entities();
                 (&entities, &player_data).join().next().unwrap().0
             };
-            if try_attack(2, 1, 1, ai_entity, player_entity, world).is_err() {
+            if try_attack(2, true, 1, 1, ai_entity, player_entity, world).is_err() {
                 let _ = try_move_towards(ai_entity, player_entity, world);
             }
         }))
@@ -256,7 +256,7 @@ pub fn create_soul_spectre(position: Position, world: &mut World) {
                         let entities = world.entities();
                         (&entities, &player_data).join().next().unwrap().0
                     };
-                    if try_attack(5, 1, 1, ai_entity, player_entity, world).is_err() {
+                    if try_attack(5, true, 1, 1, ai_entity, player_entity, world).is_err() {
                         let _ = try_move_towards(ai_entity, player_entity, world);
                         let _ = try_move_towards(ai_entity, player_entity, world);
                     }
@@ -280,7 +280,7 @@ pub fn create_discordant_soul(position: Position, world: &mut World) {
                 let entities = world.entities();
                 (&entities, &player_data).join().next().unwrap().0
             };
-            if try_attack(3, 1, 1, ai_entity, player_entity, world).is_err() {
+            if try_attack(3, true, 1, 1, ai_entity, player_entity, world).is_err() {
                 let _ = try_move_towards(ai_entity, player_entity, world);
             }
         }))

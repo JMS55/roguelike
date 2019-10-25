@@ -150,6 +150,7 @@ pub fn damage(
 /// Err(()) means the attacker was unable to attack
 pub fn try_attack(
     base_damage: u32,
+    is_melee: bool,
     minimum_range: u32,
     maximum_range: u32,
     attacker: Entity,
@@ -164,21 +165,8 @@ pub fn try_attack(
                 *name_data.get(target).unwrap(),
             )
         };
-
-        let gap = {
-            let position_data = world.read_storage::<Position>();
-            let attacker_position = position_data.get(attacker).unwrap();
-            let target_position = position_data.get(target).unwrap();
-            let mut gap = (attacker_position.x - target_position.x).abs() as u32;
-            let y_gap = (attacker_position.y - target_position.y).abs() as u32;
-            if y_gap > gap {
-                gap = y_gap;
-            }
-            gap
-        };
-
         let (target_died, damage_dealt) =
-            damage(base_damage, gap == 1, Some(attacker), target, world);
+            damage(base_damage, is_melee, Some(attacker), target, world);
 
         let mut message_log = world.fetch_mut::<MessageLog>();
         message_log.new_message(
