@@ -14,7 +14,7 @@ pub fn create_player(world: &mut World) {
         .with(Name("Player"))
         .with(player)
         .with(Position::new(0, 0))
-        .with(Attackable::new(30, 0, false))
+        .with(Attackable::new(30, 0, None, false))
         .with(Sprite::new("player"))
         .build();
 }
@@ -60,6 +60,7 @@ pub fn create_floor(position: Position, world: &mut World) {
         .with(Intangible {})
         .with(Sprite {
             id: "floor",
+            double_sized: false,
             in_foreground: false,
         })
         .build();

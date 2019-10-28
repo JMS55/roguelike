@@ -1,5 +1,6 @@
 use crate::attack::*;
 use crate::data::*;
+use crate::items;
 use crate::movement::*;
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -13,7 +14,11 @@ pub fn create_random_layer1(rarity: Rarity, position: Position, world: &mut Worl
             Rarity::Common => vec![create_phase_bat, create_danger_spider, create_pungent_ooze],
             Rarity::Uncommon => vec![create_skeleton_scout, create_volatile_husk],
             Rarity::Rare => vec![create_arcane_ooze, create_soul_spectre],
-            Rarity::Epic => vec![create_siro_king_of_hell, create_xilphene_the_moth_priestess],
+            Rarity::Epic => vec![
+                create_siro_king_of_hell,
+                create_xilphene_the_moth_priestess,
+                create_ume_the_dungeon_heart,
+            ],
         };
         *choices.choose(rng).unwrap()
     };
@@ -21,6 +26,12 @@ pub fn create_random_layer1(rarity: Rarity, position: Position, world: &mut Worl
 }
 
 pub fn create_phase_bat(position: Position, world: &mut World) {
+    let attackable = Attackable::new(
+        8,
+        20,
+        items::create_random_layer1(Rarity::Common, world),
+        false,
+    );
     world
         .create_entity()
         .with(Name("Phase Bat"))
@@ -47,13 +58,18 @@ pub fn create_phase_bat(position: Position, world: &mut World) {
             }
         }))
         .with(position)
-        .with(Attackable::new(8, 20, false))
+        .with(attackable)
         .with(Sprite::new("phase_bat"))
         .build();
 }
 
 pub fn create_danger_spider(position: Position, world: &mut World) {
-    let mut attackable = Attackable::new(11, 20, false);
+    let mut attackable = Attackable::new(
+        11,
+        20,
+        items::create_random_layer1(Rarity::Common, world),
+        false,
+    );
     attackable.lower_spawn_times = (0.5, 3);
     world
         .create_entity()
@@ -75,7 +91,12 @@ pub fn create_danger_spider(position: Position, world: &mut World) {
 }
 
 pub fn create_pungent_ooze(position: Position, world: &mut World) {
-    let mut attackable = Attackable::new(10, 20, false);
+    let mut attackable = Attackable::new(
+        10,
+        20,
+        items::create_random_layer1(Rarity::Common, world),
+        false,
+    );
     attackable.is_oozing = true;
     world
         .create_entity()
@@ -97,6 +118,12 @@ pub fn create_pungent_ooze(position: Position, world: &mut World) {
 }
 
 pub fn create_skeleton_scout(position: Position, world: &mut World) {
+    let attackable = Attackable::new(
+        12,
+        30,
+        items::create_random_layer1(Rarity::Uncommon, world),
+        false,
+    );
     world
         .create_entity()
         .with(Name("Skeleton Scout"))
@@ -141,13 +168,18 @@ pub fn create_skeleton_scout(position: Position, world: &mut World) {
             }
         }))
         .with(position)
-        .with(Attackable::new(12, 30, false))
+        .with(attackable)
         .with(Sprite::new("skeleton_scout"))
         .build();
 }
 
 pub fn create_volatile_husk(position: Position, world: &mut World) {
-    let mut attackable = Attackable::new(9, 30, false);
+    let mut attackable = Attackable::new(
+        9,
+        30,
+        items::create_random_layer1(Rarity::Uncommon, world),
+        false,
+    );
     attackable.explode_on_death = (6, 2);
     world
         .create_entity()
@@ -169,6 +201,12 @@ pub fn create_volatile_husk(position: Position, world: &mut World) {
 }
 
 pub fn create_arcane_ooze(position: Position, world: &mut World) {
+    let attackable = Attackable::new(
+        10,
+        50,
+        items::create_random_layer1(Rarity::Rare, world),
+        false,
+    );
     world
         .create_entity()
         .with(Name("Arcane Ooze"))
@@ -176,12 +214,18 @@ pub fn create_arcane_ooze(position: Position, world: &mut World) {
             // TODO
         }))
         .with(position)
-        .with(Attackable::new(10, 50, false))
+        .with(attackable)
         .with(Sprite::new("arcane_ooze"))
         .build();
 }
 
 pub fn create_soul_spectre(position: Position, world: &mut World) {
+    let attackable = Attackable::new(
+        16,
+        50,
+        items::create_random_layer1(Rarity::Rare, world),
+        false,
+    );
     world
         .create_entity()
         .with(Name("Soul Spectre"))
@@ -265,7 +309,7 @@ pub fn create_soul_spectre(position: Position, world: &mut World) {
         }))
         .with(AICounter(0))
         .with(position)
-        .with(Attackable::new(16, 50, false))
+        .with(attackable)
         .with(Sprite::new("soul_spectre"))
         .build();
 }
@@ -285,12 +329,18 @@ pub fn create_discordant_soul(position: Position, world: &mut World) {
             }
         }))
         .with(position)
-        .with(Attackable::new(6, 5, false))
+        .with(Attackable::new(6, 5, None, false))
         .with(Sprite::new("discordant_soul"))
         .build();
 }
 
 pub fn create_siro_king_of_hell(position: Position, world: &mut World) {
+    let attackable = Attackable::new(
+        50,
+        200,
+        items::create_random_layer1(Rarity::Epic, world),
+        true,
+    );
     world
         .create_entity()
         .with(Name("Siro, King of Hell"))
@@ -298,20 +348,49 @@ pub fn create_siro_king_of_hell(position: Position, world: &mut World) {
             // TODO
         }))
         .with(position)
-        .with(Attackable::new(50, 200, true))
+        .with(attackable)
         .with(Sprite::new("placeholder"))
         .build();
 }
 
 pub fn create_xilphene_the_moth_priestess(position: Position, world: &mut World) {
+    let attackable = Attackable::new(
+        40,
+        200,
+        items::create_random_layer1(Rarity::Epic, world),
+        true,
+    );
     world
         .create_entity()
-        .with(Name("Xilphene, The Moth_ Priestes"))
+        .with(Name("Xilphene, The Moth Priestess"))
         .with(AI::new(|ai_entity, world| {
             // TODO
         }))
         .with(position)
-        .with(Attackable::new(40, 200, true))
+        .with(attackable)
         .with(Sprite::new("placeholder"))
+        .build();
+}
+
+pub fn create_ume_the_dungeon_heart(position: Position, world: &mut World) {
+    let attackable = Attackable::new(
+        50,
+        200,
+        items::create_random_layer1(Rarity::Epic, world),
+        true,
+    );
+    world
+        .create_entity()
+        .with(Name("Ume, The Dungeon Heart"))
+        .with(AI::new(|ai_entity, world| {
+            // TODO
+        }))
+        .with(position)
+        .with(attackable)
+        .with(Sprite {
+            id: "ume_the_dungeon_heart",
+            double_sized: true,
+            in_foreground: true,
+        })
         .build();
 }

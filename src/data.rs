@@ -67,6 +67,7 @@ impl Position {
 #[storage(BTreeStorage)]
 pub struct Sprite {
     pub id: &'static str,
+    pub double_sized: bool,
     pub in_foreground: bool,
 }
 
@@ -74,12 +75,13 @@ impl Sprite {
     pub fn new(id: &'static str) -> Self {
         Self {
             id,
+            double_sized: false,
             in_foreground: true,
         }
     }
 }
 
-#[derive(Component, Debug, PartialEq, Clone)]
+#[derive(Component, Clone)]
 #[storage(BTreeStorage)]
 pub struct Attackable {
     pub current_health: u32,
@@ -87,6 +89,7 @@ pub struct Attackable {
 
     pub is_boss: bool,
     pub crystals_dropped_on_death: u32,
+    pub item_dropped_on_death: Option<fn(Option<Position>, &mut World) -> Entity>,
 
     pub is_oozing: bool,
     pub explode_on_death: (u32, u32),  // Damage, Radius
@@ -96,13 +99,19 @@ pub struct Attackable {
 }
 
 impl Attackable {
-    pub fn new(max_health: u32, crystals_dropped_on_death: u32, is_boss: bool) -> Self {
+    pub fn new(
+        max_health: u32,
+        crystals_dropped_on_death: u32,
+        item_dropped_on_death: Option<fn(Option<Position>, &mut World) -> Entity>,
+        is_boss: bool,
+    ) -> Self {
         Self {
             current_health: max_health,
             max_health,
 
             is_boss,
             crystals_dropped_on_death,
+            item_dropped_on_death,
 
             is_oozing: false,
             explode_on_death: (0, 0),

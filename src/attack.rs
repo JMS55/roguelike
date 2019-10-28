@@ -140,6 +140,17 @@ pub fn damage(
             player.crystals += target_attackable.crystals_dropped_on_death;
         }
 
+        let (item_dropped_on_death, target_position) = {
+            let attackable_data = world.read_storage::<Attackable>();
+            let position_data = world.read_storage::<Position>();
+            let target_attackable = attackable_data.get(target).unwrap();
+            let target_position = position_data.get(target).unwrap();
+            (target_attackable.item_dropped_on_death, *target_position)
+        };
+        if let Some(item_dropped_on_death) = item_dropped_on_death {
+            (item_dropped_on_death)(Some(target_position), world);
+        }
+
         world.delete_entity(target).unwrap();
     }
 

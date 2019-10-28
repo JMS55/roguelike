@@ -93,12 +93,15 @@ impl RenderSystem {
                 if (0..15).contains(&adjusted_entity_position_x)
                     && (0..15).contains(&adjusted_entity_position_y)
                 {
-                    let dest_rect = Rect::new(
+                    let mut dest_rect = Rect::new(
                         (adjusted_entity_position_x * 32) as i32,
                         (adjusted_entity_position_y * 32) as i32,
                         32,
                         32,
                     );
+                    if entity_sprite.double_sized {
+                        dest_rect = Rect::new(dest_rect.x - 32, dest_rect.y - 32, 96, 96);
+                    }
                     let texture = texture_creator
                         .load_texture(format!("assets/{}.png", entity_sprite.id))
                         .unwrap();

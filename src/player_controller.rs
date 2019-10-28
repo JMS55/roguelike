@@ -30,6 +30,36 @@ impl PlayerControllerSystem {
             PlayerAction::None => false,
             PlayerAction::Pass => true,
             PlayerAction::Interact => {
+                let mut end_turn = false;
+
+                if let Some(item_entity) = {
+                    let entities = world.entities();
+                    let position_data = world.read_storage::<Position>();
+                    let item_data = world.read_storage::<Item>();
+                    let player_position = position_data.get(player_entity).unwrap();
+                    let new_position = player_position.offset_by(player.facing_direction);
+                    (&entities, &position_data, &item_data)
+                        .join()
+                        .find(|(_, position, _)| {
+                            position == &&new_position
+                                && ((player_position.x - position.x != 0)
+                                    != (player_position.y - position.y != 0))
+                        })
+                        .map(|(entity, _, _)| entity)
+                } {
+                    let mut player_data = world.write_storage::<Player>();
+                    let mut position_data = world.write_storage::<Position>();
+                    let player = player_data.get_mut(player_entity).unwrap();
+                    for item_slot in player.inventory.iter_mut() {
+                        if *item_slot == None {
+                            position_data.remove(item_entity);
+                            *item_slot = Some(item_entity);
+                            end_turn = true;
+                            break;
+                        }
+                    }
+                };
+
                 let is_facing_staircase = {
                     let position_data = world.read_storage::<Position>();
                     let staircase_data = world.read_storage::<Staircase>();
@@ -57,8 +87,10 @@ impl PlayerControllerSystem {
                         player_attackable.oozed_stacks = 0;
                     }
                     generate_dungeon_system.run(world);
+                    end_turn = true;
                 }
-                is_facing_staircase
+
+                end_turn
             }
             PlayerAction::Turn(direction) => {
                 let mut player_data = world.write_storage::<Player>();

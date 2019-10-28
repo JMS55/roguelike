@@ -1,7 +1,33 @@
 use crate::attack::{damage, player_can_attack, try_attack};
 use crate::data::*;
 use crate::movement::try_move;
+use rand::seq::SliceRandom;
+use rand::Rng;
 use specs::{Builder, Entity, Join, World, WorldExt};
+
+pub fn create_random_layer1(
+    rarity: Rarity,
+    world: &mut World,
+) -> Option<fn(Option<Position>, &mut World) -> Entity> {
+    let rng = &mut world.fetch_mut::<RNG>().0;
+    let should_generate_item = match rarity {
+        Rarity::Common | Rarity::Uncommon => rng.gen_ratio(1, 8),
+        Rarity::Rare | Rarity::Epic => true,
+    };
+    if should_generate_item {
+        let choices: Vec<fn(Option<Position>, &mut World) -> Entity> = match rarity {
+            Rarity::Common => vec![create_jump_saber, create_twister_staff],
+            Rarity::Uncommon => vec![],
+            Rarity::Rare => vec![],
+            Rarity::Epic => vec![],
+        };
+        // return Some(*choices.choose(rng).unwrap()); TODO: Once other rarity items are added replace below code with this line
+        if let Some(choice) = choices.choose(rng) {
+            return Some(*choice);
+        }
+    }
+    None
+}
 
 pub fn create_jump_saber(item_position: Option<Position>, world: &mut World) -> Entity {
     let mut e = world
