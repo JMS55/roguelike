@@ -111,12 +111,12 @@ impl PlayerControllerSystem {
                     ItemSlot::Three => 2,
                     ItemSlot::Four => 3,
                 };
-                if let Some(item) = player.inventory[inventory_index] {
+                if let Some(item_entity) = player.inventory[inventory_index] {
                     let item = {
                         let item_data = world.read_storage::<Item>();
-                        *item_data.get(item).unwrap()
+                        *item_data.get(item_entity).unwrap()
                     };
-                    let item_succeeded = (item.try_use)(world).is_ok();
+                    let item_succeeded = (item.try_use)(item_entity, world).is_ok();
                     if item_succeeded {
                         let mut player_data = world.write_storage::<Player>();
                         let player = player_data.get_mut(player_entity).unwrap();

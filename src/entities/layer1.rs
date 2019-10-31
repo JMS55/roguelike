@@ -231,37 +231,37 @@ pub fn create_soul_spectre(position: Position, world: &mut World) {
         .with(Name("Soul Spectre"))
         .with(AI::new(|ai_entity, world| {
             let has_been_attacked = {
-                let mut ai_counter_data = world.write_storage::<AICounter>();
+                let mut counter_data = world.write_storage::<Counter>();
                 let position_data = world.read_storage::<Position>();
                 let player_data = world.read_storage::<Player>();
                 let attackable_data = world.read_storage::<Attackable>();
-                let ai_counter = ai_counter_data.get_mut(ai_entity).unwrap();
+                let ai_counter = counter_data.get_mut(ai_entity).unwrap();
                 let ai_position = position_data.get(ai_entity).unwrap();
                 let ai_attackable = attackable_data.get(ai_entity).unwrap();
                 let player_position = (&player_data, &position_data).join().next().unwrap().1;
 
-                if *ai_counter == AICounter(0) && ai_position.distance_from(*player_position) <= 6 {
+                if *ai_counter == Counter(0) && ai_position.distance_from(*player_position) <= 6 {
                     let mut message_log = world.fetch_mut::<MessageLog>();
                     message_log.new_message(
                         "Hello there. May I have your soul?",
                         MessageColor::White,
                         MessageDisplayLength::Medium,
                     );
-                    *ai_counter = AICounter(1);
+                    *ai_counter = Counter(1);
                 }
 
                 if ai_attackable.current_health != ai_attackable.max_health
                     && ai_position.distance_from(*player_position) <= 6
                 {
-                    if *ai_counter != AICounter(2)
+                    if *ai_counter != Counter(2)
                     {
                     let mut message_log = world.fetch_mut::<MessageLog>();
                     message_log.new_message("Wow, that was rude. All I was asking for was your immortal soul, no need to overreact. Now I'm ANRGY!", MessageColor::Red, MessageDisplayLength::Medium);
                     }
-                    *ai_counter = AICounter(2);
+                    *ai_counter = Counter(2);
                 }
 
-                *ai_counter == AICounter(2)
+                *ai_counter == Counter(2)
             };
 
             if has_been_attacked {
@@ -307,7 +307,7 @@ pub fn create_soul_spectre(position: Position, world: &mut World) {
                 }
             }
         }))
-        .with(AICounter(0))
+        .with(Counter(0))
         .with(position)
         .with(attackable)
         .with(Sprite::new("soul_spectre"))

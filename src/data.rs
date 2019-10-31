@@ -136,7 +136,7 @@ impl AI {
 
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 #[storage(BTreeStorage)]
-pub struct AICounter(pub u32);
+pub struct Counter(pub u32);
 
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 #[storage(BTreeStorage)]
@@ -207,11 +207,11 @@ impl Spawner {
 #[storage(BTreeStorage)]
 pub struct Item {
     pub crystals_per_use: u32,
-    pub try_use: fn(&mut World) -> Result<(), ()>,
+    pub try_use: fn(Entity, &mut World) -> Result<(), ()>,
 }
 
 impl Item {
-    pub fn new(crystals_per_use: u32, try_use: fn(&mut World) -> Result<(), ()>) -> Self {
+    pub fn new(crystals_per_use: u32, try_use: fn(Entity, &mut World) -> Result<(), ()>) -> Self {
         Self {
             crystals_per_use,
             try_use,
