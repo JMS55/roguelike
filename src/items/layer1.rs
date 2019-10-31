@@ -57,7 +57,7 @@ pub fn create_jump_saber(item_position: Option<Position>, world: &mut World) -> 
                 Err(())
             }
         }))
-        .with(Sprite::new("placeholder"));
+        .with(Sprite::new("jump_saber"));
     if let Some(item_position) = item_position {
         e = e.with(item_position);
     }
@@ -92,7 +92,7 @@ pub fn create_twister_staff(item_position: Option<Position>, world: &mut World) 
                 Err(())
             }
         }))
-        .with(Sprite::new("placeholder"));
+        .with(Sprite::new("twister_staff"));
     if let Some(item_position) = item_position {
         e = e.with(item_position);
     }

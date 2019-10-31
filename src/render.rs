@@ -39,6 +39,10 @@ impl RenderSystem {
     pub fn run(&mut self, world: &mut World) {
         self.canvas.clear();
         let texture_creator = self.canvas.texture_creator();
+        let font = self
+            .ttf_context
+            .load_font("assets/04B_03__.ttf", 16)
+            .unwrap();
 
         let entities = world.entities();
         let player_data = world.read_storage::<Player>();
@@ -135,10 +139,61 @@ impl RenderSystem {
                 }
             }
 
-            let font = self
-                .ttf_context
-                .load_font("assets/04B_03__.ttf", 16)
-                .unwrap();
+            {
+                let (player, player_attackable) =
+                    (&player_data, &attackable_data).join().next().unwrap();
+
+                for (i, item_entity) in player.inventory.iter().take(4).enumerate() {
+                    let i = 4 - i as i32;
+                    let dest_rect = Rect::new(480 - (32 * i) - (6 * i), 6, 32, 32);
+                    let texture = texture_creator
+                        .load_texture("assets/ui_item_frame.png")
+                        .unwrap();
+                    self.canvas.copy(&texture, None, dest_rect).unwrap();
+
+                    if let Some(item_entity) = item_entity {
+                        let item_sprite = sprite_data.get(*item_entity).unwrap();
+                        let texture = texture_creator
+                            .load_texture(format!("assets/{}.png", item_sprite.id))
+                            .unwrap();
+                        self.canvas.copy(&texture, None, dest_rect).unwrap();
+                    }
+                }
+
+                let dest_rect = Rect::new(328, 38, 32, 32);
+                let texture = texture_creator.load_texture("assets/ui_heart.png").unwrap();
+                self.canvas.copy(&texture, None, dest_rect).unwrap();
+                let dest_rect = Rect::new(366, 41, 64, 32);
+                let surface = font
+                    .render(&format!(
+                        "{}/{}",
+                        player_attackable.current_health, player_attackable.max_health
+                    ))
+                    .blended(Color::RGBA(255, 0, 0, 255))
+                    .unwrap();
+                let texture = texture_creator
+                    .create_texture_from_surface(&surface)
+                    .unwrap();
+                self.canvas.fill_rect(dest_rect).unwrap();
+                self.canvas.copy(&texture, None, dest_rect).unwrap();
+
+                let dest_rect = Rect::new(328, 76, 32, 32);
+                let texture = texture_creator
+                    .load_texture("assets/ui_crystal.png")
+                    .unwrap();
+                self.canvas.copy(&texture, None, dest_rect).unwrap();
+                let dest_rect = Rect::new(366, 73, 32, 32);
+                let surface = font
+                    .render(&format!("{}", player.crystals))
+                    .blended(Color::RGBA(13, 121, 198, 255))
+                    .unwrap();
+                let texture = texture_creator
+                    .create_texture_from_surface(&surface)
+                    .unwrap();
+                self.canvas.fill_rect(dest_rect).unwrap();
+                self.canvas.copy(&texture, None, dest_rect).unwrap();
+            }
+
             let mut height_used = 0;
             for (index, message) in message_log.recent_messages().enumerate() {
                 let mut alpha = 255;

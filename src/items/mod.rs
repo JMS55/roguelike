@@ -21,7 +21,7 @@ pub fn create_makeshift_dagger(item_position: Option<Position>, world: &mut Worl
                 Err(())
             }
         }))
-        .with(Sprite::new("placeholder"));
+        .with(Sprite::new("makeshift_dagger"));
     if let Some(item_position) = item_position {
         e = e.with(item_position);
     }
