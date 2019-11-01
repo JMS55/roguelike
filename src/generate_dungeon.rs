@@ -203,19 +203,17 @@ impl GenerateDungeonSystem {
             );
             entities::create_staircase(Position::new(staircase_x, staircase_y), world);
 
-            for room in &rooms {
-                if self.rng.gen_ratio(1, 4) {
-                    let x = self.rng.gen_range(
-                        room.center.x - room.x_radius as i16,
-                        room.center.x + room.x_radius as i16 + 1,
-                    );
-                    let y = self.rng.gen_range(
-                        room.center.y - room.y_radius as i16,
-                        room.center.y + room.y_radius as i16 + 1,
-                    );
-                    if x != staircase_x && y != staircase_y {
-                        entities::create_spawner(Position::new(x, y), world);
-                    }
+            for room in rooms.iter().skip(1).take(4) {
+                let x = self.rng.gen_range(
+                    room.center.x - room.x_radius as i16,
+                    room.center.x + room.x_radius as i16 + 1,
+                );
+                let y = self.rng.gen_range(
+                    room.center.y - room.y_radius as i16,
+                    room.center.y + room.y_radius as i16 + 1,
+                );
+                if x != staircase_x && y != staircase_y {
+                    entities::create_spawner(Position::new(x, y), world);
                 }
             }
         } else {

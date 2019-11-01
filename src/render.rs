@@ -70,13 +70,15 @@ impl RenderSystem {
                 self.previous_noise_t = t;
                 self.previous_noise_modifier = modifier;
                 let mut pixel_data: [u8; 480 * 480 * 3] = [0; 480 * 480 * 3];
-                for x in 0..480 {
-                    for y in 0..480 {
+                let mut i = 0;
+                for y in 0..480 {
+                    for x in 0..480 {
                         let mut n = self.noise.get([x as f64 / 256.0, y as f64 / 256.0, t]);
                         n = (n + 1.0) * 32.0;
-                        pixel_data[3 * (y * 480 + x)] = (n * modifier.0).round() as u8;
-                        pixel_data[3 * (y * 480 + x) + 1] = (n * modifier.1).round() as u8;
-                        pixel_data[3 * (y * 480 + x) + 2] = (n * modifier.2).round() as u8;
+                        pixel_data[i] = (n * modifier.0).round() as u8;
+                        pixel_data[i + 1] = (n * modifier.1).round() as u8;
+                        pixel_data[i + 2] = (n * modifier.2).round() as u8;
+                        i += 3;
                     }
                 }
                 let mut texture = texture_creator
