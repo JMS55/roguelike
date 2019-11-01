@@ -145,13 +145,14 @@ impl RenderSystem {
 
                 for (i, item_entity) in player.inventory.iter().take(4).enumerate() {
                     let i = 4 - i as i32;
-                    let dest_rect = Rect::new(480 - (32 * i) - (6 * i), 6, 32, 32);
+                    let dest_rect = Rect::new(480 - (36 * i) - (6 * i), 6, 36, 36);
                     let texture = texture_creator
                         .load_texture("assets/ui_item_frame.png")
                         .unwrap();
                     self.canvas.copy(&texture, None, dest_rect).unwrap();
 
                     if let Some(item_entity) = item_entity {
+                        let dest_rect = Rect::new(480 - (36 * i) - (6 * i) + 6, 12, 24, 24);
                         let item_sprite = sprite_data.get(*item_entity).unwrap();
                         let texture = texture_creator
                             .load_texture(format!("assets/{}.png", item_sprite.id))
@@ -160,10 +161,10 @@ impl RenderSystem {
                     }
                 }
 
-                let dest_rect = Rect::new(328, 38, 32, 32);
+                let dest_rect = Rect::new(312, 42, 36, 36);
                 let texture = texture_creator.load_texture("assets/ui_heart.png").unwrap();
                 self.canvas.copy(&texture, None, dest_rect).unwrap();
-                let dest_rect = Rect::new(366, 41, 64, 32);
+                let dest_rect = Rect::new(355, 48, 72, 36);
                 let surface = font
                     .render(&format!(
                         "{}/{}",
@@ -177,12 +178,12 @@ impl RenderSystem {
                 self.canvas.fill_rect(dest_rect).unwrap();
                 self.canvas.copy(&texture, None, dest_rect).unwrap();
 
-                let dest_rect = Rect::new(328, 76, 32, 32);
+                let dest_rect = Rect::new(312, 81, 36, 36);
                 let texture = texture_creator
                     .load_texture("assets/ui_crystal.png")
                     .unwrap();
                 self.canvas.copy(&texture, None, dest_rect).unwrap();
-                let dest_rect = Rect::new(366, 73, 32, 32);
+                let dest_rect = Rect::new(355, 84, 36, 36);
                 let surface = font
                     .render(&format!("{}", player.crystals))
                     .blended(Color::RGBA(13, 121, 198, 255))
