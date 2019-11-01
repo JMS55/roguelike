@@ -46,7 +46,7 @@ fn main() {
     let mut generate_dungeon_system = GenerateDungeonSystem::new();
     let mut render_system = RenderSystem::new(&sdl_context);
 
-    let mut frames_since_last_input = 5;
+    let mut last_input_time = Instant::now();
     let mut time_accumulator = Duration::from_secs(0);
     let mut previous_time = Instant::now();
     'game_loop: loop {
@@ -61,36 +61,38 @@ fn main() {
         if keyboard.is_scancode_pressed(Scancode::Escape) {
             break 'game_loop;
         }
-        if game_state == GameState::PlayerTurn && frames_since_last_input >= 5 {
+        if game_state == GameState::PlayerTurn
+            && last_input_time.elapsed() >= Duration::from_millis(100)
+        {
             let mut keystate = (0, 0, true);
             if keyboard.is_scancode_pressed(Scancode::LShift) {
-                frames_since_last_input = 0;
+                last_input_time = Instant::now();
                 keystate.2 = false;
             }
             if keyboard.is_scancode_pressed(Scancode::W)
                 || keyboard.is_scancode_pressed(Scancode::Up)
             {
-                frames_since_last_input = 0;
+                last_input_time = Instant::now();
                 keystate.1 = 1;
             }
             if keyboard.is_scancode_pressed(Scancode::A)
                 || keyboard.is_scancode_pressed(Scancode::Left)
             {
-                frames_since_last_input = 0;
+                last_input_time = Instant::now();
                 player_controller_system.action = PlayerAction::Turn(Direction::Left);
                 keystate.0 = -1;
             }
             if keyboard.is_scancode_pressed(Scancode::S)
                 || keyboard.is_scancode_pressed(Scancode::Down)
             {
-                frames_since_last_input = 0;
+                last_input_time = Instant::now();
                 player_controller_system.action = PlayerAction::Turn(Direction::Down);
                 keystate.1 = -1;
             }
             if keyboard.is_scancode_pressed(Scancode::D)
                 || keyboard.is_scancode_pressed(Scancode::Right)
             {
-                frames_since_last_input = 0;
+                last_input_time = Instant::now();
                 keystate.0 = 1;
             }
             player_controller_system.action = match keystate {
@@ -114,31 +116,29 @@ fn main() {
                 _ => unreachable!(),
             };
             if keyboard.is_scancode_pressed(Scancode::E) {
-                frames_since_last_input = 0;
+                last_input_time = Instant::now();
                 player_controller_system.action = PlayerAction::Pass;
             }
             if keyboard.is_scancode_pressed(Scancode::Q) {
-                frames_since_last_input = 0;
+                last_input_time = Instant::now();
                 player_controller_system.action = PlayerAction::Interact;
             }
             if keyboard.is_scancode_pressed(Scancode::Num1) {
-                frames_since_last_input = 0;
+                last_input_time = Instant::now();
                 player_controller_system.action = PlayerAction::UseItem(ItemSlot::One);
             }
             if keyboard.is_scancode_pressed(Scancode::Num2) {
-                frames_since_last_input = 0;
+                last_input_time = Instant::now();
                 player_controller_system.action = PlayerAction::UseItem(ItemSlot::Two);
             }
             if keyboard.is_scancode_pressed(Scancode::Num3) {
-                frames_since_last_input = 0;
+                last_input_time = Instant::now();
                 player_controller_system.action = PlayerAction::UseItem(ItemSlot::Three);
             }
             if keyboard.is_scancode_pressed(Scancode::Num4) {
-                frames_since_last_input = 0;
+                last_input_time = Instant::now();
                 player_controller_system.action = PlayerAction::UseItem(ItemSlot::Four);
             }
-        } else {
-            frames_since_last_input += 1;
         }
 
         let current_time = Instant::now();

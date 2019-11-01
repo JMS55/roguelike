@@ -203,7 +203,7 @@ impl GenerateDungeonSystem {
             );
             entities::create_staircase(Position::new(staircase_x, staircase_y), world);
 
-            for room in rooms.iter().skip(1).take(4) {
+            for room in rooms.iter().skip(1).take(3) {
                 let x = self.rng.gen_range(
                     room.center.x - room.x_radius as i16,
                     room.center.x + room.x_radius as i16 + 1,
