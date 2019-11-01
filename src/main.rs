@@ -67,21 +67,29 @@ fn main() {
                 frames_since_last_input = 0;
                 keystate.2 = false;
             }
-            if keyboard.is_scancode_pressed(Scancode::W) {
+            if keyboard.is_scancode_pressed(Scancode::W)
+                || keyboard.is_scancode_pressed(Scancode::Up)
+            {
                 frames_since_last_input = 0;
                 keystate.1 = 1;
             }
-            if keyboard.is_scancode_pressed(Scancode::A) {
+            if keyboard.is_scancode_pressed(Scancode::A)
+                || keyboard.is_scancode_pressed(Scancode::Left)
+            {
                 frames_since_last_input = 0;
                 player_controller_system.action = PlayerAction::Turn(Direction::Left);
                 keystate.0 = -1;
             }
-            if keyboard.is_scancode_pressed(Scancode::S) {
+            if keyboard.is_scancode_pressed(Scancode::S)
+                || keyboard.is_scancode_pressed(Scancode::Down)
+            {
                 frames_since_last_input = 0;
                 player_controller_system.action = PlayerAction::Turn(Direction::Down);
                 keystate.1 = -1;
             }
-            if keyboard.is_scancode_pressed(Scancode::D) {
+            if keyboard.is_scancode_pressed(Scancode::D)
+                || keyboard.is_scancode_pressed(Scancode::Right)
+            {
                 frames_since_last_input = 0;
                 keystate.0 = 1;
             }

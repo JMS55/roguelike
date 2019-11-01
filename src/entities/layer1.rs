@@ -349,7 +349,11 @@ pub fn create_siro_king_of_hell(position: Position, world: &mut World) {
         }))
         .with(position)
         .with(attackable)
-        .with(Sprite::new("placeholder"))
+        .with(Sprite {
+            id: "placeholder",
+            double_sized: true,
+            in_foreground: true,
+        })
         .build();
 }
 
@@ -368,7 +372,11 @@ pub fn create_xilphene_the_moth_priestess(position: Position, world: &mut World)
         }))
         .with(position)
         .with(attackable)
-        .with(Sprite::new("placeholder"))
+        .with(Sprite {
+            id: "placeholder",
+            double_sized: true,
+            in_foreground: true,
+        })
         .build();
 }
 

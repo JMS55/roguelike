@@ -9,6 +9,7 @@ use specs::{Builder, Entity, Join, World, WorldExt};
 pub fn create_makeshift_dagger(item_position: Option<Position>, world: &mut World) -> Entity {
     let mut e = world
         .create_entity()
+        .with(Name("Makeshift Dagger"))
         .with(Item::new(0, |_, world| {
             if let Some(target_entity) = player_can_attack(1, 1, world) {
                 let player_entity = {

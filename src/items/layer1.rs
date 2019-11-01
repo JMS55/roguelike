@@ -32,6 +32,7 @@ pub fn create_random_layer1(
 pub fn create_jump_saber(item_position: Option<Position>, world: &mut World) -> Entity {
     let mut e = world
         .create_entity()
+        .with(Name("Jump Saber"))
         .with(Item::new(0, |_, world| {
             if let Some(target_entity) = player_can_attack(2, 2, world) {
                 let player_entity = {
@@ -67,6 +68,7 @@ pub fn create_jump_saber(item_position: Option<Position>, world: &mut World) -> 
 pub fn create_twister_staff(item_position: Option<Position>, world: &mut World) -> Entity {
     let mut e = world
         .create_entity()
+        .with(Name("Twister Staff"))
         .with(Item::new(10, |_, world| {
             if let Some(target_entity) = player_can_attack(1, 2, world) {
                 let player_entity = {
@@ -102,6 +104,7 @@ pub fn create_twister_staff(item_position: Option<Position>, world: &mut World) 
 pub fn create_netherbane(item_position: Option<Position>, world: &mut World) -> Entity {
     let mut e = world
         .create_entity()
+        .with(Name("Netherbane"))
         .with(Item::new(0, |item_entity, world| {
             if let Some(target_entity) = player_can_attack(1, 1, world) {
                 let (player_entity, damage) = {

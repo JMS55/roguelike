@@ -1,4 +1,4 @@
-use crate::data::{Attackable, Direction, GameState, Item, ItemSlot, Player, Position, Staircase};
+use crate::data::*;
 use crate::generate_dungeon::GenerateDungeonSystem;
 use crate::movement::try_move;
 use specs::{Join, World, WorldExt};
@@ -47,13 +47,21 @@ impl PlayerControllerSystem {
                         })
                         .map(|(entity, _, _)| entity)
                 } {
+                    let mut message_log = world.fetch_mut::<MessageLog>();
                     let mut player_data = world.write_storage::<Player>();
                     let mut position_data = world.write_storage::<Position>();
+                    let name_data = world.read_storage::<Name>();
                     let player = player_data.get_mut(player_entity).unwrap();
                     for item_slot in player.inventory.iter_mut() {
                         if *item_slot == None {
                             position_data.remove(item_entity);
                             *item_slot = Some(item_entity);
+                            let item_name = name_data.get(item_entity).unwrap().0;
+                            message_log.new_message(
+                                format!("You picked up: {}", item_name),
+                                MessageColor::White,
+                                MessageDisplayLength::Medium,
+                            );
                             end_turn = true;
                             break;
                         }
@@ -102,7 +110,12 @@ impl PlayerControllerSystem {
                     let mut player_data = world.write_storage::<Player>();
                     player_data.get_mut(player_entity).unwrap().facing_direction = direction;
                 }
-                try_move(player_entity, direction, world).is_ok()
+                if try_move(player_entity, direction, world).is_ok() {
+                    true
+                } else {
+                    self.action = PlayerAction::UseItem(ItemSlot::One);
+                    false
+                }
             }
             PlayerAction::UseItem(item_slot) => {
                 let inventory_index = match item_slot {
@@ -131,9 +144,9 @@ impl PlayerControllerSystem {
                 }
             }
         };
-        self.action = PlayerAction::None;
 
         if player_acted {
+            self.action = PlayerAction::None;
             {
                 let mut player_data = world.write_storage::<Player>();
                 player_data.get_mut(player_entity).unwrap().turns_taken += 1;
