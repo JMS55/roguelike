@@ -62,7 +62,7 @@ fn main() {
             break 'game_loop;
         }
         if game_state == GameState::PlayerTurn
-            && last_input_time.elapsed() >= Duration::from_millis(100)
+            && last_input_time.elapsed() >= Duration::from_millis(150)
         {
             let mut keystate = (0, 0, true);
             if keyboard.is_scancode_pressed(Scancode::LShift) {

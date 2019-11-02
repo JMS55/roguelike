@@ -7,6 +7,7 @@ edition = "2018"
 specs = "0.15"
 specs-derive = "0.4"
 rand = "0.7"
+rand_distr = "0.2"
 rand_pcg = "0.2"
 sdl2 = { version = "0.32", features = ["image", "ttf", "gfx"] }
 noise = { version = "0.6", default-features = false }
