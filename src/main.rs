@@ -1,6 +1,7 @@
 mod attack;
 mod data;
 mod drain_crystals;
+mod end_of_turn;
 mod enemy_controller;
 mod entities;
 mod generate_dungeon;
@@ -12,6 +13,7 @@ mod spawn;
 
 use data::*;
 use drain_crystals::drain_crystals_system;
+use end_of_turn::end_of_turn;
 use enemy_controller::enemy_controller_system;
 use generate_dungeon::GenerateDungeonSystem;
 use player_controller::{PlayerActed, PlayerAction, PlayerControllerSystem};
@@ -161,10 +163,12 @@ fn main() {
                     {
                         drain_crystals_system(&mut world);
                     }
+                    end_of_turn(&mut world);
                 }
                 GameState::EnemyTurn => {
                     tick_spawners(&mut world);
                     enemy_controller_system(&mut world);
+                    end_of_turn(&mut world);
                     world.insert(GameState::PlayerTurn);
                 }
             }

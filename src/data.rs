@@ -96,6 +96,7 @@ pub struct Attackable {
     pub lower_spawn_times: (f32, u32), // Health percent threshold, Turns to lower by
 
     pub oozed_stacks: u32,
+    pub cant_attack_turns: u32,
 }
 
 impl Attackable {
@@ -118,6 +119,7 @@ impl Attackable {
             lower_spawn_times: (0.0, 0),
 
             oozed_stacks: 0,
+            cant_attack_turns: 0,
         }
     }
 }

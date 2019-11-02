@@ -1,4 +1,4 @@
-use crate::attack::{damage, player_can_attack, try_attack};
+use crate::attack::{damage, player_get_target, try_attack};
 use crate::data::*;
 use crate::movement::try_move;
 use rand::seq::SliceRandom;
@@ -18,7 +18,11 @@ pub fn create_random_layer1(
     };
     if should_generate_item {
         let choices: Vec<fn(Option<Position>, &mut World) -> Entity> = match rarity {
-            Rarity::Common => vec![create_jump_saber, create_twister_staff],
+            Rarity::Common => vec![
+                create_jump_saber,
+                create_twister_staff,
+                create_edge_of_ebony,
+            ],
             Rarity::Uncommon => vec![create_improvised_spellbook],
             Rarity::Rare => vec![create_netherbane],
             Rarity::Epic => vec![],
@@ -33,7 +37,7 @@ pub fn create_jump_saber(item_position: Option<Position>, world: &mut World) -> 
         .create_entity()
         .with(Name("Jump Saber"))
         .with(Item::new(0, |_, world| {
-            if let Some(target_entity) = player_can_attack(2, 2, world) {
+            if let Some(target_entity) = player_get_target(2, 2, world) {
                 let player_entity = {
                     let (player_entity, player_facing_direction) = {
                         let entities = world.entities();
@@ -69,7 +73,7 @@ pub fn create_twister_staff(item_position: Option<Position>, world: &mut World) 
         .create_entity()
         .with(Name("Twister Staff"))
         .with(Item::new(10, |_, world| {
-            if let Some(target_entity) = player_can_attack(1, 2, world) {
+            if let Some(target_entity) = player_get_target(1, 2, world) {
                 let player_entity = {
                     let entities = world.entities();
                     let player_data = world.read_storage::<Player>();
@@ -100,12 +104,44 @@ pub fn create_twister_staff(item_position: Option<Position>, world: &mut World) 
     e.build()
 }
 
+pub fn create_edge_of_ebony(item_position: Option<Position>, world: &mut World) -> Entity {
+    let mut e = world
+        .create_entity()
+        .with(Name("Edge of Ebony"))
+        .with(Item::new(5, |_, world| {
+            if let Some(target_entity) = player_get_target(1, 1, world) {
+                let player_entity = {
+                    let entities = world.entities();
+                    let player_data = world.read_storage::<Player>();
+                    (&entities, &player_data).join().next().unwrap().0
+                };
+                let attack_result = try_attack(9, true, 1, 1, player_entity, target_entity, world);
+                if attack_result == Ok(false) {
+                    let rng = &mut world.fetch_mut::<RNG>().0;
+                    if rng.gen_ratio(1, 5) {
+                        let mut attackable_data = world.write_storage::<Attackable>();
+                        let target_attackable = attackable_data.get_mut(target_entity).unwrap();
+                        target_attackable.cant_attack_turns += 2;
+                    }
+                }
+                attack_result.map(|_| ())
+            } else {
+                Err(())
+            }
+        }))
+        .with(Sprite::new("edge_of_ebony"));
+    if let Some(item_position) = item_position {
+        e = e.with(item_position);
+    }
+    e.build()
+}
+
 pub fn create_improvised_spellbook(item_position: Option<Position>, world: &mut World) -> Entity {
     let mut e = world
         .create_entity()
         .with(Name("Improvised Spellbook"))
         .with(Item::new(20, |_, world| {
-            if let Some(target_entity) = player_can_attack(1, 3, world) {
+            if let Some(target_entity) = player_get_target(1, 3, world) {
                 let player_entity = {
                     let entities = world.entities();
                     let player_data = world.read_storage::<Player>();
@@ -120,7 +156,7 @@ pub fn create_improvised_spellbook(item_position: Option<Position>, world: &mut 
                 Err(())
             }
         }))
-        .with(Sprite::new("placeholder"));
+        .with(Sprite::new("improvised_spellbook"));
     if let Some(item_position) = item_position {
         e = e.with(item_position);
     }
@@ -132,7 +168,7 @@ pub fn create_netherbane(item_position: Option<Position>, world: &mut World) -> 
         .create_entity()
         .with(Name("Netherbane"))
         .with(Item::new(0, |item_entity, world| {
-            if let Some(target_entity) = player_can_attack(1, 1, world) {
+            if let Some(target_entity) = player_get_target(1, 1, world) {
                 let (player_entity, damage) = {
                     let entities = world.entities();
                     let player_data = world.read_storage::<Player>();

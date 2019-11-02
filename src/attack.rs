@@ -203,8 +203,14 @@ pub fn can_attack(
     world: &World,
 ) -> bool {
     let position_data = world.read_storage::<Position>();
+    let attackable_data = world.read_storage::<Attackable>();
     let attacker_position = position_data.get(attacker).unwrap();
+    let attacker_attackable = attackable_data.get(attacker).unwrap();
     let target_position = position_data.get(target).unwrap();
+
+    if attacker_attackable.cant_attack_turns != 0 {
+        return false;
+    }
 
     let x_gap = (attacker_position.x - target_position.x).abs() as u32;
     let y_gap = (attacker_position.y - target_position.y).abs() as u32;
@@ -214,7 +220,7 @@ pub fn can_attack(
     is_straight_path && gap >= minimum_range && gap <= maximum_range
 }
 
-pub fn player_can_attack(minimum_range: u32, maximum_range: u32, world: &World) -> Option<Entity> {
+pub fn player_get_target(minimum_range: u32, maximum_range: u32, world: &World) -> Option<Entity> {
     let entities = world.entities();
     let player_data = world.read_storage::<Player>();
     let position_data = world.read_storage::<Position>();
