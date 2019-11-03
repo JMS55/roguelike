@@ -54,7 +54,7 @@ pub fn create_jump_saber(item_position: Option<Position>, world: &mut World) -> 
                     }
                 };
                 if let Some(player_entity) = player_entity {
-                    try_attack(8, true, 1, 1, player_entity, target_entity, world).map(|_| ())
+                    try_attack(11, true, 1, 1, player_entity, target_entity, world).map(|_| ())
                 } else {
                     Err(())
                 }
@@ -116,7 +116,7 @@ pub fn create_edge_of_ebony(item_position: Option<Position>, world: &mut World) 
                     let player_data = world.read_storage::<Player>();
                     (&entities, &player_data).join().next().unwrap().0
                 };
-                let attack_result = try_attack(9, true, 1, 1, player_entity, target_entity, world);
+                let attack_result = try_attack(10, true, 1, 1, player_entity, target_entity, world);
                 if attack_result == Ok(false) {
                     let rng = &mut world.fetch_mut::<RNG>().0;
                     if rng.gen_ratio(1, 5) {
@@ -179,7 +179,7 @@ pub fn create_improvised_spellbook(item_position: Option<Position>, world: &mut 
                 };
                 let damage = {
                     let rng = &mut world.fetch_mut::<RNG>().0;
-                    rng.sample(Triangular::new(0.0, 20.0, 10.0).unwrap()) as u32
+                    rng.sample(Triangular::new(0.0, 15.0, 8.0).unwrap()) as u32
                 };
                 try_attack(damage, false, 1, 3, player_entity, target_entity, world).map(|_| ())
             } else {
@@ -220,7 +220,7 @@ pub fn create_netherbane(item_position: Option<Position>, world: &mut World) -> 
                 Err(())
             }
         }))
-        .with(Counter(2))
+        .with(Counter(3))
         .with(Sprite::new("netherbane"));
     if let Some(item_position) = item_position {
         e = e.with(item_position);

@@ -180,7 +180,7 @@ pub fn create_volatile_husk(position: Position, world: &mut World) {
         items::create_random_layer1(Rarity::Uncommon, world),
         false,
     );
-    attackable.explode_on_death = (6, 2);
+    attackable.explode_on_death = (6, 1);
     world
         .create_entity()
         .with(Name("Volatile Husk"))
@@ -190,7 +190,7 @@ pub fn create_volatile_husk(position: Position, world: &mut World) {
                 let entities = world.entities();
                 (&entities, &player_data).join().next().unwrap().0
             };
-            if try_attack(2, true, 1, 1, ai_entity, player_entity, world).is_err() {
+            if try_attack(3, true, 1, 1, ai_entity, player_entity, world).is_err() {
                 let _ = try_move_towards(ai_entity, player_entity, world);
             }
         }))

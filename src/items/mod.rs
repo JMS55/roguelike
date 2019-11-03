@@ -17,7 +17,7 @@ pub fn create_makeshift_dagger(item_position: Option<Position>, world: &mut Worl
                     let player_data = world.read_storage::<Player>();
                     (&entities, &player_data).join().next().unwrap().0
                 };
-                try_attack(6, true, 1, 1, player_entity, target_entity, world).map(|_| ())
+                try_attack(8, true, 1, 1, player_entity, target_entity, world).map(|_| ())
             } else {
                 Err(())
             }
