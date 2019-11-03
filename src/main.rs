@@ -162,8 +162,8 @@ fn main() {
                         == PlayerActed(true)
                     {
                         drain_crystals_system(&mut world);
+                        end_of_turn(&mut world);
                     }
-                    end_of_turn(&mut world);
                 }
                 GameState::EnemyTurn => {
                     tick_spawners(&mut world);

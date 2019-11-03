@@ -22,6 +22,7 @@ pub fn create_random_layer1(
                 create_jump_saber,
                 create_twister_staff,
                 create_edge_of_ebony,
+                create_blight_bow,
             ],
             Rarity::Uncommon => vec![create_improvised_spellbook],
             Rarity::Rare => vec![create_netherbane],
@@ -130,6 +131,35 @@ pub fn create_edge_of_ebony(item_position: Option<Position>, world: &mut World) 
             }
         }))
         .with(Sprite::new("edge_of_ebony"));
+    if let Some(item_position) = item_position {
+        e = e.with(item_position);
+    }
+    e.build()
+}
+
+pub fn create_blight_bow(item_position: Option<Position>, world: &mut World) -> Entity {
+    let mut e = world
+        .create_entity()
+        .with(Name("Blight Bow"))
+        .with(Item::new(8, |_, world| {
+            if let Some(target_entity) = player_get_target(1, 2, world) {
+                let player_entity = {
+                    let entities = world.entities();
+                    let player_data = world.read_storage::<Player>();
+                    (&entities, &player_data).join().next().unwrap().0
+                };
+                let attack_result = try_attack(4, false, 1, 2, player_entity, target_entity, world);
+                if attack_result == Ok(false) {
+                    let mut attackable_data = world.write_storage::<Attackable>();
+                    let target_attackable = attackable_data.get_mut(target_entity).unwrap();
+                    target_attackable.blight_stacks += 6;
+                }
+                attack_result.map(|_| ())
+            } else {
+                Err(())
+            }
+        }))
+        .with(Sprite::new("blight_bow"));
     if let Some(item_position) = item_position {
         e = e.with(item_position);
     }

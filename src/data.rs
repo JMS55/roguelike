@@ -97,6 +97,7 @@ pub struct Attackable {
 
     pub oozed_stacks: u32,
     pub cant_attack_turns: u32,
+    pub blight_stacks: u32,
 }
 
 impl Attackable {
@@ -120,6 +121,7 @@ impl Attackable {
 
             oozed_stacks: 0,
             cant_attack_turns: 0,
+            blight_stacks: 0,
         }
     }
 }
@@ -278,6 +280,7 @@ pub enum MessageColor {
     White,
     Orange,
     Red,
+    Green,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]

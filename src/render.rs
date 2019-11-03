@@ -246,6 +246,7 @@ impl MessageColor {
             MessageColor::White => (255, 255, 255),
             MessageColor::Orange => (255, 96, 0),
             MessageColor::Red => (255, 0, 0),
+            MessageColor::Green => (0, 255, 0),
         };
         Color::RGBA(r, g, b, alpha)
     }
