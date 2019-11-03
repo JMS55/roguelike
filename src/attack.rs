@@ -95,8 +95,8 @@ pub fn damage(
                 (&entities, &position_data, &attackable_data)
                     .join()
                     .filter(|(_, position, _)| {
-                        position.x - target_position.x <= blast_radius as i16
-                            && position.y - target_position.y <= blast_radius as i16
+                        (position.x - target_position.x).abs() <= blast_radius as i16
+                            && (position.y - target_position.y).abs() <= blast_radius as i16
                     })
                     .map(|(entity, _, _)| entity)
                     .collect::<Vec<Entity>>()
