@@ -88,56 +88,62 @@ impl RenderSystem {
                 self.canvas.copy(&texture, None, None).unwrap();
             }
 
+            let player_position = (&player_data, &position_data).join().next().unwrap().1;
             let mut render_objects = (&entities, &position_data, &sprite_data)
                 .join()
+                .filter_map(|(entity, position, sprite)| {
+                    let adjusted_position = Position::new(
+                        position.x - player_position.x + 7,
+                        player_position.y - position.y + 7,
+                    );
+                    if (0..15).contains(&adjusted_position.x)
+                        && (0..15).contains(&adjusted_position.y)
+                    {
+                        Some((entity, adjusted_position, sprite))
+                    } else {
+                        None
+                    }
+                })
                 .collect::<Vec<_>>();
             render_objects.sort_unstable_by_key(|(_, _, sprite)| sprite.in_foreground);
-            let player_position = (&player_data, &position_data).join().next().unwrap().1;
             for (entity, entity_position, entity_sprite) in render_objects {
-                let adjusted_entity_position_x = entity_position.x - player_position.x + 7;
-                let adjusted_entity_position_y = player_position.y - entity_position.y + 7;
-                if (0..15).contains(&adjusted_entity_position_x)
-                    && (0..15).contains(&adjusted_entity_position_y)
-                {
-                    let mut dest_rect = Rect::new(
-                        (adjusted_entity_position_x * 32) as i32,
-                        (adjusted_entity_position_y * 32) as i32,
-                        32,
-                        32,
-                    );
-                    if entity_sprite.double_sized {
-                        dest_rect = Rect::new(dest_rect.x - 32, dest_rect.y - 32, 96, 96);
-                    }
-                    let texture = texture_creator
-                        .load_texture(format!("assets/{}.png", entity_sprite.id))
+                let mut dest_rect = Rect::new(
+                    (entity_position.x * 32) as i32,
+                    (entity_position.y * 32) as i32,
+                    32,
+                    32,
+                );
+                if entity_sprite.double_sized {
+                    dest_rect = Rect::new(dest_rect.x - 32, dest_rect.y - 32, 96, 96);
+                }
+                let texture = texture_creator
+                    .load_texture(format!("assets/{}.png", entity_sprite.id))
+                    .unwrap();
+                self.canvas.copy(&texture, None, dest_rect).unwrap();
+                if let Some(player) = player_data.get(entity) {
+                    let texture = match player.facing_direction {
+                        Direction::Up | Direction::Down | Direction::Left | Direction::Right => {
+                            "assets/direction_indicator.png"
+                        }
+                        Direction::UpLeft
+                        | Direction::DownLeft
+                        | Direction::DownRight
+                        | Direction::UpRight => "assets/direction_indicator_diagonal.png",
+                    };
+                    let texture = texture_creator.load_texture(texture).unwrap();
+                    let rotation = match player.facing_direction {
+                        Direction::Up => 90.0,
+                        Direction::Down => 270.0,
+                        Direction::Left => 0.0,
+                        Direction::Right => 180.0,
+                        Direction::UpLeft => 0.0,
+                        Direction::DownLeft => 270.0,
+                        Direction::DownRight => 180.0,
+                        Direction::UpRight => 90.0,
+                    };
+                    self.canvas
+                        .copy_ex(&texture, None, dest_rect, rotation, None, false, false)
                         .unwrap();
-                    self.canvas.copy(&texture, None, dest_rect).unwrap();
-                    if let Some(player) = player_data.get(entity) {
-                        let texture = match player.facing_direction {
-                            Direction::Up
-                            | Direction::Down
-                            | Direction::Left
-                            | Direction::Right => "assets/direction_indicator.png",
-                            Direction::UpLeft
-                            | Direction::DownLeft
-                            | Direction::DownRight
-                            | Direction::UpRight => "assets/direction_indicator_diagonal.png",
-                        };
-                        let texture = texture_creator.load_texture(texture).unwrap();
-                        let rotation = match player.facing_direction {
-                            Direction::Up => 90.0,
-                            Direction::Down => 270.0,
-                            Direction::Left => 0.0,
-                            Direction::Right => 180.0,
-                            Direction::UpLeft => 0.0,
-                            Direction::DownLeft => 270.0,
-                            Direction::DownRight => 180.0,
-                            Direction::UpRight => 90.0,
-                        };
-                        self.canvas
-                            .copy_ex(&texture, None, dest_rect, rotation, None, false, false)
-                            .unwrap();
-                    }
                 }
             }
 
