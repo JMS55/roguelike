@@ -330,6 +330,8 @@ impl MessageDisplayLength {
 pub struct ScrollInfo {
     pub scroll_of_shadows_sprite: &'static str,
     pub scroll_of_shadows_identified: bool,
+    pub scroll_of_displacement_sprite: &'static str,
+    pub scroll_of_displacement_identified: bool,
 }
 
 impl ScrollInfo {
@@ -348,6 +350,8 @@ impl ScrollInfo {
         Self {
             scroll_of_shadows_sprite: colors.pop().unwrap(),
             scroll_of_shadows_identified: false,
+            scroll_of_displacement_sprite: colors.pop().unwrap(),
+            scroll_of_displacement_identified: false,
         }
     }
 }

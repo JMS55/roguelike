@@ -38,7 +38,7 @@ pub fn create_makeshift_dagger(item_position: Option<Position>, world: &mut Worl
 pub fn create_random_scroll(item_position: Option<Position>, world: &mut World) -> Entity {
     let create_function = {
         let rng = &mut world.fetch_mut::<RNG>().0;
-        let choices = [create_scroll_of_shadows];
+        let choices = [create_scroll_of_shadows, create_scroll_of_displacement];
         *choices.choose(rng).unwrap()
     };
     (create_function)(item_position, world)
@@ -51,17 +51,14 @@ pub fn create_scroll_of_shadows(item_position: Option<Position>, world: &mut Wor
         .create_entity()
         .with(Name::new("Scroll of Shadows", concealed))
         .with(Item::new(0, |_, world| {
-            let mut scroll_info = world.fetch_mut::<ScrollInfo>();
-            if !scroll_info.scroll_of_shadows_identified {
-                let mut message_log = world.fetch_mut::<MessageLog>();
-                message_log.new_message(
-                    "You used a Scroll of Shadows!",
-                    MessageColor::White,
-                    MessageDisplayLength::Medium,
-                );
-            }
+            let mut message_log = world.fetch_mut::<MessageLog>();
+            message_log.new_message(
+                "You used a Scroll of Shadows!",
+                MessageColor::White,
+                MessageDisplayLength::Medium,
+            );
 
-            scroll_info.scroll_of_shadows_identified = true;
+            world.fetch_mut::<ScrollInfo>().scroll_of_shadows_identified = true;
             let mut player_data = world.write_storage::<Player>();
             let mut name_data = world.write_storage::<Name>();
             let player = (&mut player_data).join().next().unwrap();
@@ -81,6 +78,70 @@ pub fn create_scroll_of_shadows(item_position: Option<Position>, world: &mut Wor
             let attackable_data = world.read_storage::<Attackable>();
             for (sprite, _, _) in (&mut sprite_data, &attackable_data, !&player_data).join() {
                 sprite.id = "concealed";
+            }
+
+            ItemResult {
+                should_end_turn: true,
+                should_consume_item: true,
+            }
+        }))
+        .with(Sprite::new(sprite));
+    if let Some(item_position) = item_position {
+        e = e.with(item_position);
+    }
+    e.build()
+}
+
+pub fn create_scroll_of_displacement(item_position: Option<Position>, world: &mut World) -> Entity {
+    let sprite = world.fetch::<ScrollInfo>().scroll_of_shadows_sprite;
+    let concealed = !world
+        .fetch::<ScrollInfo>()
+        .scroll_of_displacement_identified;
+    let mut e = world
+        .create_entity()
+        .with(Name::new("Scroll of Displacement", concealed))
+        .with(Item::new(0, |_, world| {
+            let mut message_log = world.fetch_mut::<MessageLog>();
+            message_log.new_message(
+                "You used a Scroll of Displacement!",
+                MessageColor::White,
+                MessageDisplayLength::Medium,
+            );
+
+            world
+                .fetch_mut::<ScrollInfo>()
+                .scroll_of_displacement_identified = true;
+            let mut player_data = world.write_storage::<Player>();
+            let mut name_data = world.write_storage::<Name>();
+            let player = (&mut player_data).join().next().unwrap();
+            for item_entity in player.inventory.iter().flatten() {
+                let item_name = name_data.get_mut(*item_entity).unwrap();
+                if item_name.text == "Scroll of Displacement" {
+                    item_name.concealed = false;
+                }
+            }
+
+            let mut new_player_position = None;
+            let mut position_data = world.write_storage::<Position>();
+            let intangible_data = world.read_storage::<Intangible>();
+            let mut rng = world.fetch_mut::<RNG>();
+            let mut possible_new_positions = (&position_data, &intangible_data)
+                .join()
+                .map(|(position, _)| position)
+                .collect::<Vec<&Position>>();
+            possible_new_positions.shuffle(&mut rng.0);
+            for position1 in possible_new_positions {
+                if !(&position_data, !&intangible_data)
+                    .join()
+                    .any(|(position2, _)| position1 == position2)
+                {
+                    new_player_position = Some(*position1);
+                    break;
+                }
+            }
+            if let Some(new_player_position) = new_player_position {
+                let player_position = (&player_data, &mut position_data).join().next().unwrap().1;
+                *player_position = new_player_position;
             }
 
             ItemResult {
