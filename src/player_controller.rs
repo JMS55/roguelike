@@ -94,8 +94,8 @@ impl PlayerControllerSystem {
 
                         player_attackable.oozed_stacks = 0;
                         player_attackable.cant_attack_turns = 0;
+                        player_attackable.cant_move_turns = 0;
                         player_attackable.blight_stacks = 0;
-                        player_attackable.entangled_turns = 0;
                     }
                     generate_dungeon_system.run(world);
                     end_turn = true;

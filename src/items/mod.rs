@@ -198,7 +198,8 @@ pub fn create_scroll_of_entanglement(item_position: Option<Position>, world: &mu
                 if (player_position.x - entity_position.x).abs() <= 5
                     && (player_position.y - entity_position.y).abs() <= 5
                 {
-                    entity_attackable.entangled_turns += 16;
+                    entity_attackable.cant_attack_turns += 8;
+                    entity_attackable.cant_move_turns += 16;
                 }
             }
 

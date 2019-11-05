@@ -115,8 +115,8 @@ pub struct Attackable {
 
     pub oozed_stacks: u32,
     pub cant_attack_turns: u32,
+    pub cant_move_turns: u32,
     pub blight_stacks: u32,
-    pub entangled_turns: u32,
 }
 
 impl Attackable {
@@ -140,8 +140,8 @@ impl Attackable {
 
             oozed_stacks: 0,
             cant_attack_turns: 0,
+            cant_move_turns: 0,
             blight_stacks: 0,
-            entangled_turns: 0,
         }
     }
 }
