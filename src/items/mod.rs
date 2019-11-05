@@ -2,10 +2,11 @@ mod layer1;
 
 pub use layer1::*;
 
-use crate::attack::{player_get_target, try_attack};
+use crate::attack::{damage, player_get_target, try_attack};
 use crate::data::*;
 use rand::seq::SliceRandom;
-use specs::{Builder, Entity, Join, World, WorldExt};
+use specs::{Builder, Entities, Entity, Join, ReadStorage, World, WorldExt};
+use std::collections::HashSet;
 
 pub fn create_makeshift_dagger(item_position: Option<Position>, world: &mut World) -> Entity {
     let mut e = world
@@ -42,6 +43,7 @@ pub fn create_random_scroll(item_position: Option<Position>, world: &mut World) 
             create_scroll_of_shadows,
             create_scroll_of_displacement,
             create_scroll_of_entanglement,
+            create_scroll_of_lightning,
         ];
         *choices.choose(rng).unwrap()
     };
@@ -97,7 +99,7 @@ pub fn create_scroll_of_shadows(item_position: Option<Position>, world: &mut Wor
 }
 
 pub fn create_scroll_of_displacement(item_position: Option<Position>, world: &mut World) -> Entity {
-    let sprite = world.fetch::<ScrollInfo>().scroll_of_shadows_sprite;
+    let sprite = world.fetch::<ScrollInfo>().scroll_of_displacement_sprite;
     let concealed = !world
         .fetch::<ScrollInfo>()
         .scroll_of_displacement_identified;
@@ -161,7 +163,7 @@ pub fn create_scroll_of_displacement(item_position: Option<Position>, world: &mu
 }
 
 pub fn create_scroll_of_entanglement(item_position: Option<Position>, world: &mut World) -> Entity {
-    let sprite = world.fetch::<ScrollInfo>().scroll_of_shadows_sprite;
+    let sprite = world.fetch::<ScrollInfo>().scroll_of_entanglement_sprite;
     let concealed = !world
         .fetch::<ScrollInfo>()
         .scroll_of_entanglement_identified;
@@ -201,6 +203,103 @@ pub fn create_scroll_of_entanglement(item_position: Option<Position>, world: &mu
                     entity_attackable.cant_attack_turns += 8;
                     entity_attackable.cant_move_turns += 16;
                 }
+            }
+
+            ItemResult {
+                should_end_turn: true,
+                should_consume_item: true,
+            }
+        }))
+        .with(Sprite::new(sprite));
+    if let Some(item_position) = item_position {
+        e = e.with(item_position);
+    }
+    e.build()
+}
+
+pub fn create_scroll_of_lightning(item_position: Option<Position>, world: &mut World) -> Entity {
+    let sprite = world.fetch::<ScrollInfo>().scroll_of_lightning_sprite;
+    let concealed = !world.fetch::<ScrollInfo>().scroll_of_lightning_identified;
+    let mut e = world
+        .create_entity()
+        .with(Name::new("Scroll of Lightning", concealed))
+        .with(Item::new(0, |_, world| {
+            {
+                let mut message_log = world.fetch_mut::<MessageLog>();
+                message_log.new_message(
+                    "You used a Scroll of Lightning!",
+                    MessageColor::White,
+                    MessageDisplayLength::Medium,
+                );
+
+                world
+                    .fetch_mut::<ScrollInfo>()
+                    .scroll_of_lightning_identified = true;
+                let mut player_data = world.write_storage::<Player>();
+                let mut name_data = world.write_storage::<Name>();
+                let player = (&mut player_data).join().next().unwrap();
+                for item_entity in player.inventory.iter().flatten() {
+                    let item_name = name_data.get_mut(*item_entity).unwrap();
+                    if item_name.text == "Scroll of Lightning" {
+                        item_name.concealed = false;
+                    }
+                }
+            }
+
+            fn add_targets(
+                entity: Entity,
+                seen_entities: &mut HashSet<Entity>,
+                player_position: Position,
+                entities: &Entities,
+                attackable_data: &ReadStorage<Attackable>,
+                position_data: &ReadStorage<Position>,
+            ) {
+                let entity_position = position_data.get(entity).unwrap();
+                for (next_entity, next_entity_position, _) in
+                    (entities, position_data, attackable_data).join()
+                {
+                    if (entity_position.x - next_entity_position.x).abs() <= 3
+                        && (entity_position.y - next_entity_position.y).abs() <= 3
+                        && next_entity_position != &player_position
+                        && !seen_entities.contains(&next_entity)
+                    {
+                        seen_entities.insert(next_entity);
+                        add_targets(
+                            next_entity,
+                            seen_entities,
+                            player_position,
+                            entities,
+                            attackable_data,
+                            position_data,
+                        );
+                    }
+                }
+            };
+            let mut targets;
+            {
+                let mut seen_entities = HashSet::new();
+                let entities = world.entities();
+                let attackable_data = world.read_storage::<Attackable>();
+                let position_data = world.read_storage::<Position>();
+                let player_data = world.read_storage::<Player>();
+                let mut rng = world.fetch_mut::<RNG>();
+                let (player_entity, _, player_position) = (&entities, &player_data, &position_data)
+                    .join()
+                    .next()
+                    .unwrap();
+                add_targets(
+                    player_entity,
+                    &mut seen_entities,
+                    *player_position,
+                    &entities,
+                    &attackable_data,
+                    &position_data,
+                );
+                targets = seen_entities.into_iter().collect::<Vec<Entity>>();
+                targets.shuffle(&mut rng.0);
+            }
+            for entity in targets {
+                damage(8, false, None, entity, world);
             }
 
             ItemResult {
