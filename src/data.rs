@@ -116,6 +116,7 @@ pub struct Attackable {
     pub oozed_stacks: u32,
     pub cant_attack_turns: u32,
     pub blight_stacks: u32,
+    pub entangled_turns: u32,
 }
 
 impl Attackable {
@@ -140,6 +141,7 @@ impl Attackable {
             oozed_stacks: 0,
             cant_attack_turns: 0,
             blight_stacks: 0,
+            entangled_turns: 0,
         }
     }
 }
@@ -332,6 +334,8 @@ pub struct ScrollInfo {
     pub scroll_of_shadows_identified: bool,
     pub scroll_of_displacement_sprite: &'static str,
     pub scroll_of_displacement_identified: bool,
+    pub scroll_of_entanglement_sprite: &'static str,
+    pub scroll_of_entanglement_identified: bool,
 }
 
 impl ScrollInfo {
@@ -352,6 +356,8 @@ impl ScrollInfo {
             scroll_of_shadows_identified: false,
             scroll_of_displacement_sprite: colors.pop().unwrap(),
             scroll_of_displacement_identified: false,
+            scroll_of_entanglement_sprite: colors.pop().unwrap(),
+            scroll_of_entanglement_identified: false,
         }
     }
 }

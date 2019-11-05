@@ -29,6 +29,10 @@ pub fn end_of_turn(world: &mut World) {
                 entity_attackable.cant_attack_turns -= 1;
             }
 
+            if entity_attackable.entangled_turns > 0 {
+                entity_attackable.entangled_turns -= 1;
+            }
+
             if entity_attackable.blight_stacks > 0 {
                 entity_attackable.blight_stacks -= 1;
                 apply_blight_damage = true;

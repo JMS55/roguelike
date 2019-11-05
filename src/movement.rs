@@ -1,4 +1,4 @@
-use crate::data::{Direction, Intangible, Position, AI};
+use crate::data::{Attackable, Direction, Intangible, Position, AI};
 use specs::{Entity, Join, World, WorldExt};
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
@@ -15,6 +15,12 @@ pub fn try_move(entity: Entity, direction: Direction, world: &mut World) -> Resu
 }
 
 pub fn can_move(entity: Entity, direction: Direction, world: &World) -> bool {
+    let attackable_data = world.read_storage::<Attackable>();
+    let entity_attackable = attackable_data.get(entity).unwrap();
+    if entity_attackable.entangled_turns != 0 {
+        return false;
+    }
+
     let obstacles;
     let entity_position;
     {

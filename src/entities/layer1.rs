@@ -253,10 +253,9 @@ pub fn create_soul_spectre(position: Position, world: &mut World) -> Entity {
                 if ai_attackable.current_health != ai_attackable.max_health
                     && ai_position.distance_from(*player_position) <= 6
                 {
-                    if *ai_counter != Counter(2)
-                    {
-                    let mut message_log = world.fetch_mut::<MessageLog>();
-                    message_log.new_message("Wow, that was rude. All I was asking for was your immortal soul, no need to overreact. Now I'm ANRGY!", MessageColor::Red, MessageDisplayLength::Medium);
+                    if *ai_counter != Counter(2) {
+                        let mut message_log = world.fetch_mut::<MessageLog>();
+                        message_log.new_message("Wow, that was rude. All I was asking for was your immortal soul, no need to overreact. Now I'm ANRGY!", MessageColor::Red, MessageDisplayLength::Medium);
                     }
                     *ai_counter = Counter(2);
                 }

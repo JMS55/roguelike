@@ -38,7 +38,11 @@ pub fn create_makeshift_dagger(item_position: Option<Position>, world: &mut Worl
 pub fn create_random_scroll(item_position: Option<Position>, world: &mut World) -> Entity {
     let create_function = {
         let rng = &mut world.fetch_mut::<RNG>().0;
-        let choices = [create_scroll_of_shadows, create_scroll_of_displacement];
+        let choices = [
+            create_scroll_of_shadows,
+            create_scroll_of_displacement,
+            create_scroll_of_entanglement,
+        ];
         *choices.choose(rng).unwrap()
     };
     (create_function)(item_position, world)
@@ -142,6 +146,60 @@ pub fn create_scroll_of_displacement(item_position: Option<Position>, world: &mu
             if let Some(new_player_position) = new_player_position {
                 let player_position = (&player_data, &mut position_data).join().next().unwrap().1;
                 *player_position = new_player_position;
+            }
+
+            ItemResult {
+                should_end_turn: true,
+                should_consume_item: true,
+            }
+        }))
+        .with(Sprite::new(sprite));
+    if let Some(item_position) = item_position {
+        e = e.with(item_position);
+    }
+    e.build()
+}
+
+pub fn create_scroll_of_entanglement(item_position: Option<Position>, world: &mut World) -> Entity {
+    let sprite = world.fetch::<ScrollInfo>().scroll_of_shadows_sprite;
+    let concealed = !world
+        .fetch::<ScrollInfo>()
+        .scroll_of_entanglement_identified;
+    let mut e = world
+        .create_entity()
+        .with(Name::new("Scroll of Entanglement", concealed))
+        .with(Item::new(0, |_, world| {
+            let mut message_log = world.fetch_mut::<MessageLog>();
+            message_log.new_message(
+                "You used a Scroll of Entanglement!",
+                MessageColor::White,
+                MessageDisplayLength::Medium,
+            );
+
+            world
+                .fetch_mut::<ScrollInfo>()
+                .scroll_of_entanglement_identified = true;
+            let mut player_data = world.write_storage::<Player>();
+            let mut name_data = world.write_storage::<Name>();
+            let player = (&mut player_data).join().next().unwrap();
+            for item_entity in player.inventory.iter().flatten() {
+                let item_name = name_data.get_mut(*item_entity).unwrap();
+                if item_name.text == "Scroll of Entanglement" {
+                    item_name.concealed = false;
+                }
+            }
+
+            let mut attackable_data = world.write_storage::<Attackable>();
+            let position_data = world.read_storage::<Position>();
+            let player_position = (&player_data, &position_data).join().next().unwrap().1;
+            for (entity_attackable, entity_position, _) in
+                (&mut attackable_data, &position_data, !&player_data).join()
+            {
+                if (player_position.x - entity_position.x).abs() <= 5
+                    && (player_position.y - entity_position.y).abs() <= 5
+                {
+                    entity_attackable.entangled_turns += 16;
+                }
             }
 
             ItemResult {
