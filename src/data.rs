@@ -173,6 +173,7 @@ pub struct Player {
     pub crystals: u32,
     pub inventory: [Option<Entity>; 16],
     pub turns_taken: u32,
+    pub heal_turns_left: u32,
 }
 
 impl Player {
@@ -184,6 +185,7 @@ impl Player {
             crystals: 200,
             inventory,
             turns_taken: 0,
+            heal_turns_left: 10,
         }
     }
 }

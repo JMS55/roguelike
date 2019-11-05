@@ -158,7 +158,20 @@ impl PlayerControllerSystem {
             self.action = PlayerAction::None;
             {
                 let mut player_data = world.write_storage::<Player>();
-                player_data.get_mut(player_entity).unwrap().turns_taken += 1;
+                let mut player = player_data.get_mut(player_entity).unwrap();
+                player.turns_taken += 1;
+
+                if player.heal_turns_left == 0 {
+                    let mut attackable_data = world.write_storage::<Attackable>();
+                    let mut player_attackable = attackable_data.get_mut(player_entity).unwrap();
+                    player_attackable.current_health += 1;
+                    if player_attackable.current_health > player_attackable.max_health {
+                        player_attackable.current_health = player_attackable.max_health;
+                    }
+                    player.heal_turns_left = 10;
+                } else {
+                    player.heal_turns_left -= 1;
+                }
             }
             world.insert(GameState::EnemyTurn);
         }

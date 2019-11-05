@@ -39,6 +39,7 @@ impl GenerateDungeonSystem {
             player.facing_direction = Direction::Up;
             *player_position = Position::new(0, 0);
             player.turns_taken = 0;
+            player.heal_turns_left = 10;
 
             let mut keep_entities = HashSet::new();
             keep_entities.insert(player_entity);
