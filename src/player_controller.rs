@@ -56,9 +56,9 @@ impl PlayerControllerSystem {
                         if *item_slot == None {
                             position_data.remove(item_entity);
                             *item_slot = Some(item_entity);
-                            let item_name = name_data.get(item_entity).unwrap().0;
+                            let item_name = name_data.get(item_entity).unwrap();
                             message_log.new_message(
-                                format!("You picked up: {}", item_name),
+                                format!("You picked up: {}", item_name.get_text()),
                                 MessageColor::White,
                                 MessageDisplayLength::Medium,
                             );
@@ -131,8 +131,8 @@ impl PlayerControllerSystem {
                         let item_data = world.read_storage::<Item>();
                         *item_data.get(item_entity).unwrap()
                     };
-                    let item_succeeded = (item.try_use)(item_entity, world).is_ok();
-                    if item_succeeded {
+                    let item_result = (item.try_use)(item_entity, world);
+                    if item_result.should_end_turn {
                         let mut player_data = world.write_storage::<Player>();
                         let player = player_data.get_mut(player_entity).unwrap();
                         player.crystals = player
@@ -140,7 +140,13 @@ impl PlayerControllerSystem {
                             .checked_sub(item.crystals_per_use)
                             .unwrap_or(0);
                     }
-                    item_succeeded
+                    if item_result.should_consume_item {
+                        let _ = world.delete_entity(item_entity);
+                        let mut player_data = world.write_storage::<Player>();
+                        let player = player_data.get_mut(player_entity).unwrap();
+                        player.inventory[inventory_index] = None;
+                    }
+                    item_result.should_end_turn
                 } else {
                     false
                 }

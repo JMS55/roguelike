@@ -39,9 +39,9 @@ pub fn end_of_turn(world: &mut World) {
             {
                 let mut message_log = world.fetch_mut::<MessageLog>();
                 let name_data = world.read_storage::<Name>();
-                let entity_name = name_data.get(entity).unwrap().0;
+                let entity_name = name_data.get(entity).unwrap();
                 message_log.new_message(
-                    format!("{} took 1 damage from blight", entity_name),
+                    format!("{} took 1 damage from blight", entity_name.get_text()),
                     MessageColor::Green,
                     MessageDisplayLength::Short,
                 );

@@ -4,13 +4,13 @@ use crate::items;
 use crate::movement::*;
 use rand::seq::SliceRandom;
 use rand::Rng;
-use specs::{Builder, Join, World, WorldExt};
+use specs::{Builder, Entity, Join, World, WorldExt};
 use std::collections::HashSet;
 
-pub fn create_random_layer1(rarity: Rarity, position: Position, world: &mut World) {
+pub fn create_random_layer1(rarity: Rarity, position: Position, world: &mut World) -> Entity {
     let create_function = {
         let rng = &mut world.fetch_mut::<RNG>().0;
-        let choices: Vec<fn(Position, &mut World)> = match rarity {
+        let choices: Vec<fn(Position, &mut World) -> Entity> = match rarity {
             Rarity::Common => vec![create_phase_bat, create_danger_spider, create_pungent_ooze],
             Rarity::Uncommon => vec![create_skeleton_scout, create_volatile_husk],
             Rarity::Rare => vec![create_arcane_ooze, create_soul_spectre],
@@ -22,19 +22,19 @@ pub fn create_random_layer1(rarity: Rarity, position: Position, world: &mut Worl
         };
         *choices.choose(rng).unwrap()
     };
-    (create_function)(position, world);
+    (create_function)(position, world)
 }
 
-pub fn create_phase_bat(position: Position, world: &mut World) {
+pub fn create_phase_bat(position: Position, world: &mut World) -> Entity {
     let attackable = Attackable::new(
-        8,
+        9,
         20,
         items::create_random_layer1(Rarity::Common, world),
         false,
     );
     world
         .create_entity()
-        .with(Name("Phase Bat"))
+        .with(Name::new("Phase Bat", false))
         .with(AI::new(|ai_entity, world| {
             let player_entity = {
                 let player_data = world.read_storage::<Player>();
@@ -60,10 +60,10 @@ pub fn create_phase_bat(position: Position, world: &mut World) {
         .with(position)
         .with(attackable)
         .with(Sprite::new("phase_bat"))
-        .build();
+        .build()
 }
 
-pub fn create_danger_spider(position: Position, world: &mut World) {
+pub fn create_danger_spider(position: Position, world: &mut World) -> Entity {
     let mut attackable = Attackable::new(
         11,
         20,
@@ -73,7 +73,7 @@ pub fn create_danger_spider(position: Position, world: &mut World) {
     attackable.lower_spawn_times = (0.5, 3);
     world
         .create_entity()
-        .with(Name("Danger! Spider"))
+        .with(Name::new("Danger! Spider", false))
         .with(AI::new(|ai_entity, world| {
             let player_entity = {
                 let player_data = world.read_storage::<Player>();
@@ -87,10 +87,10 @@ pub fn create_danger_spider(position: Position, world: &mut World) {
         .with(position)
         .with(attackable)
         .with(Sprite::new("danger_spider"))
-        .build();
+        .build()
 }
 
-pub fn create_pungent_ooze(position: Position, world: &mut World) {
+pub fn create_pungent_ooze(position: Position, world: &mut World) -> Entity {
     let mut attackable = Attackable::new(
         10,
         20,
@@ -100,7 +100,7 @@ pub fn create_pungent_ooze(position: Position, world: &mut World) {
     attackable.is_oozing = true;
     world
         .create_entity()
-        .with(Name("Pungent Ooze"))
+        .with(Name::new("Pungent Ooze", false))
         .with(AI::new(|ai_entity, world| {
             let player_entity = {
                 let player_data = world.read_storage::<Player>();
@@ -114,10 +114,10 @@ pub fn create_pungent_ooze(position: Position, world: &mut World) {
         .with(position)
         .with(attackable)
         .with(Sprite::new("pungent_ooze"))
-        .build();
+        .build()
 }
 
-pub fn create_skeleton_scout(position: Position, world: &mut World) {
+pub fn create_skeleton_scout(position: Position, world: &mut World) -> Entity {
     let attackable = Attackable::new(
         12,
         30,
@@ -126,7 +126,7 @@ pub fn create_skeleton_scout(position: Position, world: &mut World) {
     );
     world
         .create_entity()
-        .with(Name("Skeleton Scout"))
+        .with(Name::new("Skeleton Scout", false))
         .with(AI::new(|ai_entity, world| {
             let (ai_position, player_entity, player_position) = {
                 let position_data = world.read_storage::<Position>();
@@ -170,10 +170,10 @@ pub fn create_skeleton_scout(position: Position, world: &mut World) {
         .with(position)
         .with(attackable)
         .with(Sprite::new("skeleton_scout"))
-        .build();
+        .build()
 }
 
-pub fn create_volatile_husk(position: Position, world: &mut World) {
+pub fn create_volatile_husk(position: Position, world: &mut World) -> Entity {
     let mut attackable = Attackable::new(
         9,
         30,
@@ -183,7 +183,7 @@ pub fn create_volatile_husk(position: Position, world: &mut World) {
     attackable.explode_on_death = (6, 1);
     world
         .create_entity()
-        .with(Name("Volatile Husk"))
+        .with(Name::new("Volatile Husk", false))
         .with(AI::new(|ai_entity, world| {
             let player_entity = {
                 let player_data = world.read_storage::<Player>();
@@ -197,10 +197,10 @@ pub fn create_volatile_husk(position: Position, world: &mut World) {
         .with(position)
         .with(attackable)
         .with(Sprite::new("volatile_husk"))
-        .build();
+        .build()
 }
 
-pub fn create_arcane_ooze(position: Position, world: &mut World) {
+pub fn create_arcane_ooze(position: Position, world: &mut World) -> Entity {
     let attackable = Attackable::new(
         10,
         50,
@@ -209,17 +209,17 @@ pub fn create_arcane_ooze(position: Position, world: &mut World) {
     );
     world
         .create_entity()
-        .with(Name("Arcane Ooze"))
+        .with(Name::new("Arcane Ooze", false))
         .with(AI::new(|ai_entity, world| {
             // TODO
         }))
         .with(position)
         .with(attackable)
         .with(Sprite::new("arcane_ooze"))
-        .build();
+        .build()
 }
 
-pub fn create_soul_spectre(position: Position, world: &mut World) {
+pub fn create_soul_spectre(position: Position, world: &mut World) -> Entity {
     let attackable = Attackable::new(
         16,
         50,
@@ -228,7 +228,7 @@ pub fn create_soul_spectre(position: Position, world: &mut World) {
     );
     world
         .create_entity()
-        .with(Name("Soul Spectre"))
+        .with(Name::new("Soul Spectre", false))
         .with(AI::new(|ai_entity, world| {
             let has_been_attacked = {
                 let mut counter_data = world.write_storage::<Counter>();
@@ -311,13 +311,13 @@ pub fn create_soul_spectre(position: Position, world: &mut World) {
         .with(position)
         .with(attackable)
         .with(Sprite::new("soul_spectre"))
-        .build();
+        .build()
 }
 
-pub fn create_discordant_soul(position: Position, world: &mut World) {
+pub fn create_discordant_soul(position: Position, world: &mut World) -> Entity {
     world
         .create_entity()
-        .with(Name("Discordant Soul"))
+        .with(Name::new("Discordant Soul", false))
         .with(AI::new(|ai_entity, world| {
             let player_entity = {
                 let player_data = world.read_storage::<Player>();
@@ -331,10 +331,10 @@ pub fn create_discordant_soul(position: Position, world: &mut World) {
         .with(position)
         .with(Attackable::new(6, 5, None, false))
         .with(Sprite::new("discordant_soul"))
-        .build();
+        .build()
 }
 
-pub fn create_siro_king_of_hell(position: Position, world: &mut World) {
+pub fn create_siro_king_of_hell(position: Position, world: &mut World) -> Entity {
     let attackable = Attackable::new(
         50,
         200,
@@ -343,7 +343,7 @@ pub fn create_siro_king_of_hell(position: Position, world: &mut World) {
     );
     world
         .create_entity()
-        .with(Name("Siro, King of Hell"))
+        .with(Name::new("Siro, King of Hell", false))
         .with(AI::new(|ai_entity, world| {
             // TODO
         }))
@@ -354,10 +354,10 @@ pub fn create_siro_king_of_hell(position: Position, world: &mut World) {
             double_sized: true,
             in_foreground: true,
         })
-        .build();
+        .build()
 }
 
-pub fn create_xilphene_the_moth_priestess(position: Position, world: &mut World) {
+pub fn create_xilphene_the_moth_priestess(position: Position, world: &mut World) -> Entity {
     let attackable = Attackable::new(
         40,
         200,
@@ -366,7 +366,7 @@ pub fn create_xilphene_the_moth_priestess(position: Position, world: &mut World)
     );
     world
         .create_entity()
-        .with(Name("Xilphene, The Moth Priestess"))
+        .with(Name::new("Xilphene, The Moth Priestess", false))
         .with(AI::new(|ai_entity, world| {
             // TODO
         }))
@@ -377,10 +377,10 @@ pub fn create_xilphene_the_moth_priestess(position: Position, world: &mut World)
             double_sized: true,
             in_foreground: true,
         })
-        .build();
+        .build()
 }
 
-pub fn create_ume_the_dungeon_heart(position: Position, world: &mut World) {
+pub fn create_ume_the_dungeon_heart(position: Position, world: &mut World) -> Entity {
     let attackable = Attackable::new(
         50,
         200,
@@ -389,7 +389,7 @@ pub fn create_ume_the_dungeon_heart(position: Position, world: &mut World) {
     );
     world
         .create_entity()
-        .with(Name("Ume, The Dungeon Heart"))
+        .with(Name::new("Ume, The Dungeon Heart", false))
         .with(AI::new(|ai_entity, world| {
             // TODO
         }))
@@ -400,5 +400,5 @@ pub fn create_ume_the_dungeon_heart(position: Position, world: &mut World) {
             double_sized: true,
             in_foreground: true,
         })
-        .build();
+        .build()
 }

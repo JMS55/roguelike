@@ -1,4 +1,5 @@
 use crate::items;
+use rand::seq::SliceRandom;
 use rand::SeedableRng;
 use rand_pcg::Pcg64;
 use specs::storage::BTreeStorage;
@@ -9,7 +10,24 @@ use std::time::{Duration, Instant};
 
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 #[storage(BTreeStorage)]
-pub struct Name(pub &'static str);
+pub struct Name {
+    pub text: &'static str,
+    pub concealed: bool,
+}
+
+impl Name {
+    pub fn new(text: &'static str, concealed: bool) -> Self {
+        Self { text, concealed }
+    }
+
+    pub fn get_text(&self) -> &'static str {
+        if self.concealed {
+            "???"
+        } else {
+            self.text
+        }
+    }
+}
 
 #[derive(Component, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 #[storage(BTreeStorage)]
@@ -185,6 +203,7 @@ pub struct Staircase {}
 pub struct Spawner {
     turns_since_last_spawn: u32,
     pub turns_per_spawn: u32,
+    pub spawn_concealed: bool,
 }
 
 impl Spawner {
@@ -193,6 +212,7 @@ impl Spawner {
         Self {
             turns_since_last_spawn: turns_per_spawn,
             turns_per_spawn,
+            spawn_concealed: false,
         }
     }
 
@@ -211,16 +231,22 @@ impl Spawner {
 #[storage(BTreeStorage)]
 pub struct Item {
     pub crystals_per_use: u32,
-    pub try_use: fn(Entity, &mut World) -> Result<(), ()>,
+    pub try_use: fn(Entity, &mut World) -> ItemResult,
 }
 
 impl Item {
-    pub fn new(crystals_per_use: u32, try_use: fn(Entity, &mut World) -> Result<(), ()>) -> Self {
+    pub fn new(crystals_per_use: u32, try_use: fn(Entity, &mut World) -> ItemResult) -> Self {
         Self {
             crystals_per_use,
             try_use,
         }
     }
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
+pub struct ItemResult {
+    pub should_end_turn: bool,
+    pub should_consume_item: bool,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
@@ -297,6 +323,32 @@ impl MessageDisplayLength {
             MessageDisplayLength::Medium => 4,
             MessageDisplayLength::Long => 6,
         })
+    }
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
+pub struct ScrollInfo {
+    pub scroll_of_shadows_sprite: &'static str,
+    pub scroll_of_shadows_identified: bool,
+}
+
+impl ScrollInfo {
+    pub fn new(rng: &mut RNG) -> Self {
+        let mut colors = vec![
+            "scroll_red",
+            "scroll_orange",
+            "scroll_yellow",
+            "scroll_green",
+            "scroll_cyan",
+            "scroll_blue",
+            "scroll_purple",
+            "scroll_black",
+        ];
+        colors.shuffle(&mut rng.0);
+        Self {
+            scroll_of_shadows_sprite: colors.pop().unwrap(),
+            scroll_of_shadows_identified: false,
+        }
     }
 }
 

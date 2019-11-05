@@ -79,9 +79,9 @@ pub fn damage(
             {
                 let mut message_log = world.fetch_mut::<MessageLog>();
                 let name_data = world.read_storage::<Name>();
-                let target_name = name_data.get(target).unwrap().0;
+                let target_name = name_data.get(target).unwrap();
                 message_log.new_message(
-                    format!("{} exploded!", target_name),
+                    format!("{} exploded!", target_name.get_text()),
                     MessageColor::White,
                     MessageDisplayLength::Medium,
                 );
@@ -183,7 +183,9 @@ pub fn try_attack(
         message_log.new_message(
             format!(
                 "{} attacked {} for {} damage",
-                attacker_name.0, target_name.0, damage_dealt,
+                attacker_name.get_text(),
+                target_name.get_text(),
+                damage_dealt,
             ),
             MessageColor::White,
             MessageDisplayLength::Short,

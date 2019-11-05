@@ -1,5 +1,6 @@
 use crate::attack::{damage, player_get_target, try_attack};
 use crate::data::*;
+use crate::items::create_random_scroll;
 use crate::movement::try_move;
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -24,7 +25,7 @@ pub fn create_random_layer1(
                 create_edge_of_ebony,
                 create_blight_bow,
             ],
-            Rarity::Uncommon => vec![create_improvised_spellbook],
+            Rarity::Uncommon => vec![create_improvised_spellbook, create_random_scroll],
             Rarity::Rare => vec![create_netherbane],
             Rarity::Epic => vec![],
         };
@@ -36,8 +37,9 @@ pub fn create_random_layer1(
 pub fn create_jump_saber(item_position: Option<Position>, world: &mut World) -> Entity {
     let mut e = world
         .create_entity()
-        .with(Name("Jump Saber"))
+        .with(Name::new("Jump Saber", false))
         .with(Item::new(0, |_, world| {
+            let mut attack_succeeded = false;
             if let Some(target_entity) = player_get_target(2, 2, world) {
                 let player_entity = {
                     let (player_entity, player_facing_direction) = {
@@ -54,12 +56,13 @@ pub fn create_jump_saber(item_position: Option<Position>, world: &mut World) -> 
                     }
                 };
                 if let Some(player_entity) = player_entity {
-                    try_attack(11, true, 1, 1, player_entity, target_entity, world).map(|_| ())
-                } else {
-                    Err(())
+                    attack_succeeded =
+                        try_attack(11, true, 1, 1, player_entity, target_entity, world).is_ok();
                 }
-            } else {
-                Err(())
+            }
+            ItemResult {
+                should_end_turn: attack_succeeded,
+                should_consume_item: false,
             }
         }))
         .with(Sprite::new("jump_saber"));
@@ -72,7 +75,7 @@ pub fn create_jump_saber(item_position: Option<Position>, world: &mut World) -> 
 pub fn create_twister_staff(item_position: Option<Position>, world: &mut World) -> Entity {
     let mut e = world
         .create_entity()
-        .with(Name("Twister Staff"))
+        .with(Name::new("Twister Staff", false))
         .with(Item::new(10, |_, world| {
             if let Some(target_entity) = player_get_target(1, 2, world) {
                 let player_entity = {
@@ -93,9 +96,15 @@ pub fn create_twister_staff(item_position: Option<Position>, world: &mut World) 
                     }
                     _ => {}
                 }
-                attack_result.map(|_| ())
+                ItemResult {
+                    should_end_turn: attack_result.is_ok(),
+                    should_consume_item: false,
+                }
             } else {
-                Err(())
+                ItemResult {
+                    should_end_turn: false,
+                    should_consume_item: false,
+                }
             }
         }))
         .with(Sprite::new("twister_staff"));
@@ -108,7 +117,7 @@ pub fn create_twister_staff(item_position: Option<Position>, world: &mut World) 
 pub fn create_edge_of_ebony(item_position: Option<Position>, world: &mut World) -> Entity {
     let mut e = world
         .create_entity()
-        .with(Name("Edge of Ebony"))
+        .with(Name::new("Edge of Ebony", false))
         .with(Item::new(5, |_, world| {
             if let Some(target_entity) = player_get_target(1, 1, world) {
                 let player_entity = {
@@ -125,9 +134,15 @@ pub fn create_edge_of_ebony(item_position: Option<Position>, world: &mut World) 
                         target_attackable.cant_attack_turns += 2;
                     }
                 }
-                attack_result.map(|_| ())
+                ItemResult {
+                    should_end_turn: attack_result.is_ok(),
+                    should_consume_item: false,
+                }
             } else {
-                Err(())
+                ItemResult {
+                    should_end_turn: false,
+                    should_consume_item: false,
+                }
             }
         }))
         .with(Sprite::new("edge_of_ebony"));
@@ -140,7 +155,7 @@ pub fn create_edge_of_ebony(item_position: Option<Position>, world: &mut World) 
 pub fn create_blight_bow(item_position: Option<Position>, world: &mut World) -> Entity {
     let mut e = world
         .create_entity()
-        .with(Name("Blight Bow"))
+        .with(Name::new("Blight Bow", false))
         .with(Item::new(8, |_, world| {
             if let Some(target_entity) = player_get_target(1, 2, world) {
                 let player_entity = {
@@ -154,9 +169,15 @@ pub fn create_blight_bow(item_position: Option<Position>, world: &mut World) -> 
                     let target_attackable = attackable_data.get_mut(target_entity).unwrap();
                     target_attackable.blight_stacks += 6;
                 }
-                attack_result.map(|_| ())
+                ItemResult {
+                    should_end_turn: attack_result.is_ok(),
+                    should_consume_item: false,
+                }
             } else {
-                Err(())
+                ItemResult {
+                    should_end_turn: false,
+                    should_consume_item: false,
+                }
             }
         }))
         .with(Sprite::new("blight_bow"));
@@ -169,7 +190,7 @@ pub fn create_blight_bow(item_position: Option<Position>, world: &mut World) -> 
 pub fn create_improvised_spellbook(item_position: Option<Position>, world: &mut World) -> Entity {
     let mut e = world
         .create_entity()
-        .with(Name("Improvised Spellbook"))
+        .with(Name::new("Improvised Spellbook", false))
         .with(Item::new(20, |_, world| {
             if let Some(target_entity) = player_get_target(1, 3, world) {
                 let player_entity = {
@@ -181,9 +202,17 @@ pub fn create_improvised_spellbook(item_position: Option<Position>, world: &mut 
                     let rng = &mut world.fetch_mut::<RNG>().0;
                     rng.sample(Triangular::new(0.0, 15.0, 8.0).unwrap()) as u32
                 };
-                try_attack(damage, false, 1, 3, player_entity, target_entity, world).map(|_| ())
+                let attack_result =
+                    try_attack(damage, false, 1, 3, player_entity, target_entity, world);
+                ItemResult {
+                    should_end_turn: attack_result.is_ok(),
+                    should_consume_item: false,
+                }
             } else {
-                Err(())
+                ItemResult {
+                    should_end_turn: false,
+                    should_consume_item: false,
+                }
             }
         }))
         .with(Sprite::new("improvised_spellbook"));
@@ -196,7 +225,7 @@ pub fn create_improvised_spellbook(item_position: Option<Position>, world: &mut 
 pub fn create_netherbane(item_position: Option<Position>, world: &mut World) -> Entity {
     let mut e = world
         .create_entity()
-        .with(Name("Netherbane"))
+        .with(Name::new("Netherbane", false))
         .with(Item::new(0, |item_entity, world| {
             if let Some(target_entity) = player_get_target(1, 1, world) {
                 let (player_entity, damage) = {
@@ -215,9 +244,15 @@ pub fn create_netherbane(item_position: Option<Position>, world: &mut World) -> 
                     let item_damage_counter = counter_data.get_mut(item_entity).unwrap();
                     item_damage_counter.0 += 1;
                 }
-                attack_result.map(|_| ())
+                ItemResult {
+                    should_end_turn: attack_result.is_ok(),
+                    should_consume_item: false,
+                }
             } else {
-                Err(())
+                ItemResult {
+                    should_end_turn: false,
+                    should_consume_item: false,
+                }
             }
         }))
         .with(Counter(3))

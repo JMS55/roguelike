@@ -1,4 +1,4 @@
-use crate::data::{Intangible, Position, Rarity, Spawner, RNG};
+use crate::data::{Intangible, Position, Rarity, Spawner, Sprite, RNG};
 use crate::entities::create_random_layer1;
 use rand::seq::SliceRandom;
 use specs::{Join, World, WorldExt};
@@ -21,12 +21,12 @@ pub fn tick_spawners(world: &mut World) {
         let position_data = world.read_storage::<Position>();
         for (spawner, spawner_position) in (&mut spawner_data, &position_data).join() {
             if spawner.tick() {
-                spawn_positions.push(*spawner_position);
+                spawn_positions.push((*spawner_position, spawner.spawn_concealed));
             }
         }
     }
 
-    for spawn_position in spawn_positions {
+    for (spawn_position, spawn_concealed) in spawn_positions {
         if !obstacles.contains(&spawn_position) {
             let rarity = {
                 let rng = &mut world.fetch_mut::<RNG>().0;
@@ -40,7 +40,11 @@ pub fn tick_spawners(world: &mut World) {
                 .0
             };
             obstacles.insert(spawn_position);
-            create_random_layer1(rarity, spawn_position, world);
+            let spawned_entity = create_random_layer1(rarity, spawn_position, world);
+            if spawn_concealed {
+                let mut sprite_data = world.write_storage::<Sprite>();
+                sprite_data.get_mut(spawned_entity).unwrap().id = "concealed";
+            }
         }
     }
 }

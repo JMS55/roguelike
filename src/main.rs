@@ -43,7 +43,9 @@ fn main() {
     world.register::<Item>();
     world.insert(GameState::NewGame);
     world.insert(MessageLog::new());
-    world.insert(RNG::new());
+    let mut rng = RNG::new();
+    world.insert(ScrollInfo::new(&mut rng));
+    world.insert(rng);
     let mut player_controller_system = PlayerControllerSystem::new();
     let mut generate_dungeon_system = GenerateDungeonSystem::new();
     let mut render_system = RenderSystem::new(&sdl_context);
