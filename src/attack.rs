@@ -6,6 +6,7 @@ use specs::{Entity, Join, World, WorldExt};
 pub fn damage(
     mut damage: u32,
     is_melee: bool,
+    is_magic: bool,
     attacker: Option<Entity>,
     target: Entity,
     world: &mut World,
@@ -61,10 +62,12 @@ pub fn damage(
         }
 
         let target_attackable = attackable_data.get_mut(target).unwrap();
-        target_attackable.current_health = target_attackable
-            .current_health
-            .checked_sub(damage)
-            .unwrap_or(0);
+        if !(is_magic && target_attackable.is_magic_immune) {
+            target_attackable.current_health = target_attackable
+                .current_health
+                .checked_sub(damage)
+                .unwrap_or(0);
+        }
 
         target_attackable.current_health == 0
     };
@@ -102,7 +105,7 @@ pub fn damage(
                     .collect::<Vec<Entity>>()
             };
             for target in targets {
-                self::damage(blast_damage, false, Some(target), target, world);
+                self::damage(blast_damage, false, false, Some(target), target, world);
             }
         }
 
@@ -162,6 +165,7 @@ pub fn damage(
 pub fn try_attack(
     base_damage: u32,
     is_melee: bool,
+    is_magic: bool,
     minimum_range: u32,
     maximum_range: u32,
     attacker: Entity,
@@ -176,8 +180,14 @@ pub fn try_attack(
                 *name_data.get(target).unwrap(),
             )
         };
-        let (target_died, damage_dealt) =
-            damage(base_damage, is_melee, Some(attacker), target, world);
+        let (target_died, damage_dealt) = damage(
+            base_damage,
+            is_melee,
+            is_magic,
+            Some(attacker),
+            target,
+            world,
+        );
 
         let mut message_log = world.fetch_mut::<MessageLog>();
         message_log.new_message(

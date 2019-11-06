@@ -112,6 +112,7 @@ pub struct Attackable {
     pub is_oozing: bool,
     pub explode_on_death: (u32, u32),  // Damage, Radius
     pub lower_spawn_times: (f32, u32), // Health percent threshold, Turns to lower by
+    pub is_magic_immune: bool,
 
     pub oozed_stacks: u32,
     pub cant_attack_turns: u32,
@@ -137,6 +138,7 @@ impl Attackable {
             is_oozing: false,
             explode_on_death: (0, 0),
             lower_spawn_times: (0.0, 0),
+            is_magic_immune: false,
 
             oozed_stacks: 0,
             cant_attack_turns: 0,

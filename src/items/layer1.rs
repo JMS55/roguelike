@@ -57,7 +57,8 @@ pub fn create_jump_saber(item_position: Option<Position>, world: &mut World) -> 
                 };
                 if let Some(player_entity) = player_entity {
                     attack_succeeded =
-                        try_attack(11, true, 1, 1, player_entity, target_entity, world).is_ok();
+                        try_attack(11, true, false, 1, 1, player_entity, target_entity, world)
+                            .is_ok();
                 }
             }
             ItemResult {
@@ -83,7 +84,8 @@ pub fn create_twister_staff(item_position: Option<Position>, world: &mut World) 
                     let player_data = world.read_storage::<Player>();
                     (&entities, &player_data).join().next().unwrap().0
                 };
-                let attack_result = try_attack(8, false, 1, 2, player_entity, target_entity, world);
+                let attack_result =
+                    try_attack(8, false, true, 1, 2, player_entity, target_entity, world);
                 match attack_result {
                     Ok(false) => {
                         let player_facing_direction = {
@@ -91,7 +93,7 @@ pub fn create_twister_staff(item_position: Option<Position>, world: &mut World) 
                             player_data.get(player_entity).unwrap().facing_direction
                         };
                         if try_move(target_entity, player_facing_direction, world).is_err() {
-                            damage(2, false, Some(player_entity), target_entity, world);
+                            damage(2, false, false, Some(player_entity), target_entity, world);
                         }
                     }
                     _ => {}
@@ -125,7 +127,8 @@ pub fn create_edge_of_ebony(item_position: Option<Position>, world: &mut World) 
                     let player_data = world.read_storage::<Player>();
                     (&entities, &player_data).join().next().unwrap().0
                 };
-                let attack_result = try_attack(10, true, 1, 1, player_entity, target_entity, world);
+                let attack_result =
+                    try_attack(10, true, false, 1, 1, player_entity, target_entity, world);
                 if attack_result == Ok(false) {
                     let rng = &mut world.fetch_mut::<RNG>().0;
                     if rng.gen_ratio(1, 5) {
@@ -163,7 +166,8 @@ pub fn create_blight_bow(item_position: Option<Position>, world: &mut World) -> 
                     let player_data = world.read_storage::<Player>();
                     (&entities, &player_data).join().next().unwrap().0
                 };
-                let attack_result = try_attack(4, false, 1, 2, player_entity, target_entity, world);
+                let attack_result =
+                    try_attack(4, false, false, 1, 2, player_entity, target_entity, world);
                 if attack_result == Ok(false) {
                     let mut attackable_data = world.write_storage::<Attackable>();
                     let target_attackable = attackable_data.get_mut(target_entity).unwrap();
@@ -202,8 +206,16 @@ pub fn create_improvised_spellbook(item_position: Option<Position>, world: &mut 
                     let rng = &mut world.fetch_mut::<RNG>().0;
                     rng.sample(Triangular::new(0.0, 15.0, 8.0).unwrap()) as u32
                 };
-                let attack_result =
-                    try_attack(damage, false, 1, 3, player_entity, target_entity, world);
+                let attack_result = try_attack(
+                    damage,
+                    false,
+                    true,
+                    1,
+                    3,
+                    player_entity,
+                    target_entity,
+                    world,
+                );
                 ItemResult {
                     should_end_turn: attack_result.is_ok(),
                     should_consume_item: false,
@@ -237,8 +249,16 @@ pub fn create_netherbane(item_position: Option<Position>, world: &mut World) -> 
                         counter_data.get(item_entity).unwrap().0,
                     )
                 };
-                let attack_result =
-                    try_attack(damage, true, 1, 1, player_entity, target_entity, world);
+                let attack_result = try_attack(
+                    damage,
+                    true,
+                    false,
+                    1,
+                    1,
+                    player_entity,
+                    target_entity,
+                    world,
+                );
                 if attack_result == Ok(true) {
                     let mut counter_data = world.write_storage::<Counter>();
                     let item_damage_counter = counter_data.get_mut(item_entity).unwrap();

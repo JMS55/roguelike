@@ -20,7 +20,7 @@ pub fn create_makeshift_dagger(item_position: Option<Position>, world: &mut Worl
                     let player_data = world.read_storage::<Player>();
                     (&entities, &player_data).join().next().unwrap().0
                 };
-                if try_attack(8, true, 1, 1, player_entity, target_entity, world).is_ok() {
+                if try_attack(8, true, false, 1, 1, player_entity, target_entity, world).is_ok() {
                     attack_succeeded = true;
                 }
             }
@@ -39,12 +39,29 @@ pub fn create_makeshift_dagger(item_position: Option<Position>, world: &mut Worl
 pub fn create_random_scroll(item_position: Option<Position>, world: &mut World) -> Entity {
     let create_function = {
         let rng = &mut world.fetch_mut::<RNG>().0;
+        let choices = [create_random_good_scroll, create_bad_scroll];
+        *choices.choose(rng).unwrap()
+    };
+    (create_function)(item_position, world)
+}
+
+pub fn create_random_good_scroll(item_position: Option<Position>, world: &mut World) -> Entity {
+    let create_function = {
+        let rng = &mut world.fetch_mut::<RNG>().0;
         let choices = [
-            create_scroll_of_shadows,
             create_scroll_of_displacement,
             create_scroll_of_entanglement,
             create_scroll_of_lightning,
         ];
+        *choices.choose(rng).unwrap()
+    };
+    (create_function)(item_position, world)
+}
+
+pub fn create_bad_scroll(item_position: Option<Position>, world: &mut World) -> Entity {
+    let create_function = {
+        let rng = &mut world.fetch_mut::<RNG>().0;
+        let choices = [create_scroll_of_shadows];
         *choices.choose(rng).unwrap()
     };
     (create_function)(item_position, world)
@@ -299,7 +316,7 @@ pub fn create_scroll_of_lightning(item_position: Option<Position>, world: &mut W
                 targets.shuffle(&mut rng.0);
             }
             for entity in targets {
-                damage(8, false, None, entity, world);
+                damage(9, false, true, None, entity, world);
             }
 
             ItemResult {

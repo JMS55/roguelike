@@ -50,7 +50,7 @@ pub fn end_of_turn(world: &mut World) {
                     MessageDisplayLength::Short,
                 );
             }
-            damage(1, false, None, entity, world);
+            damage(1, false, false, None, entity, world);
         }
     }
 }

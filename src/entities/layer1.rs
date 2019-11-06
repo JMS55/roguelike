@@ -41,7 +41,7 @@ pub fn create_phase_bat(position: Position, world: &mut World) -> Entity {
                 let entities = world.entities();
                 (&entities, &player_data).join().next().unwrap().0
             };
-            match try_attack(3, true, 1, 1, ai_entity, player_entity, world) {
+            match try_attack(3, true, false, 1, 1, ai_entity, player_entity, world) {
                 Ok(true) => {}
                 Ok(false) => {
                     let attack_twice = {
@@ -49,7 +49,7 @@ pub fn create_phase_bat(position: Position, world: &mut World) -> Entity {
                         rng.gen_ratio(1, 5)
                     };
                     if attack_twice {
-                        let _ = try_attack(2, true, 1, 1, ai_entity, player_entity, world);
+                        let _ = try_attack(2, true, false, 1, 1, ai_entity, player_entity, world);
                     }
                 }
                 Err(_) => {
@@ -80,7 +80,7 @@ pub fn create_danger_spider(position: Position, world: &mut World) -> Entity {
                 let entities = world.entities();
                 (&entities, &player_data).join().next().unwrap().0
             };
-            if try_attack(5, true, 1, 1, ai_entity, player_entity, world).is_err() {
+            if try_attack(5, true, false, 1, 1, ai_entity, player_entity, world).is_err() {
                 let _ = try_move_towards(ai_entity, player_entity, world);
             }
         }))
@@ -107,7 +107,7 @@ pub fn create_pungent_ooze(position: Position, world: &mut World) -> Entity {
                 let entities = world.entities();
                 (&entities, &player_data).join().next().unwrap().0
             };
-            if try_attack(4, true, 1, 1, ai_entity, player_entity, world).is_err() {
+            if try_attack(4, true, false, 1, 1, ai_entity, player_entity, world).is_err() {
                 let _ = try_move_towards(ai_entity, player_entity, world);
             }
         }))
@@ -162,7 +162,7 @@ pub fn create_skeleton_scout(position: Position, world: &mut World) -> Entity {
                     }
                     let _ = try_move(ai_entity, direction_to_move, world);
                 }
-                let _ = try_attack(4, false, 1, 2, ai_entity, player_entity, world);
+                let _ = try_attack(4, false, false, 1, 2, ai_entity, player_entity, world);
             } else {
                 let _ = try_move_towards(ai_entity, player_entity, world);
             }
@@ -190,7 +190,7 @@ pub fn create_volatile_husk(position: Position, world: &mut World) -> Entity {
                 let entities = world.entities();
                 (&entities, &player_data).join().next().unwrap().0
             };
-            if try_attack(3, true, 1, 1, ai_entity, player_entity, world).is_err() {
+            if try_attack(3, true, false, 1, 1, ai_entity, player_entity, world).is_err() {
                 let _ = try_move_towards(ai_entity, player_entity, world);
             }
         }))
@@ -201,17 +201,21 @@ pub fn create_volatile_husk(position: Position, world: &mut World) -> Entity {
 }
 
 pub fn create_arcane_ooze(position: Position, world: &mut World) -> Entity {
-    let attackable = Attackable::new(
-        10,
-        50,
-        items::create_random_layer1(Rarity::Rare, world),
-        false,
-    );
+    let mut attackable = Attackable::new(18, 50, Some(items::create_random_good_scroll), false);
+    attackable.is_oozing = true;
+    attackable.is_magic_immune = true;
     world
         .create_entity()
         .with(Name::new("Arcane Ooze", false))
         .with(AI::new(|ai_entity, world| {
-            // TODO
+            let player_entity = {
+                let player_data = world.read_storage::<Player>();
+                let entities = world.entities();
+                (&entities, &player_data).join().next().unwrap().0
+            };
+            if try_attack(6, true, true, 1, 1, ai_entity, player_entity, world).is_err() {
+                let _ = try_move_towards(ai_entity, player_entity, world);
+            }
         }))
         .with(position)
         .with(attackable)
@@ -299,7 +303,7 @@ pub fn create_soul_spectre(position: Position, world: &mut World) -> Entity {
                         let entities = world.entities();
                         (&entities, &player_data).join().next().unwrap().0
                     };
-                    if try_attack(5, true, 1, 1, ai_entity, player_entity, world).is_err() {
+                    if try_attack(5, true, false, 1, 1, ai_entity, player_entity, world).is_err() {
                         let _ = try_move_towards(ai_entity, player_entity, world);
                         let _ = try_move_towards(ai_entity, player_entity, world);
                     }
@@ -323,7 +327,7 @@ pub fn create_discordant_soul(position: Position, world: &mut World) -> Entity {
                 let entities = world.entities();
                 (&entities, &player_data).join().next().unwrap().0
             };
-            if try_attack(3, true, 1, 1, ai_entity, player_entity, world).is_err() {
+            if try_attack(3, true, false, 1, 1, ai_entity, player_entity, world).is_err() {
                 let _ = try_move_towards(ai_entity, player_entity, world);
             }
         }))
