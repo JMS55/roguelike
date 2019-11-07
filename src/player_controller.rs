@@ -136,10 +136,7 @@ impl PlayerControllerSystem {
                     if item_result.should_end_turn {
                         let mut player_data = world.write_storage::<Player>();
                         let player = player_data.get_mut(player_entity).unwrap();
-                        player.crystals = player
-                            .crystals
-                            .checked_sub(item.crystals_per_use)
-                            .unwrap_or(0);
+                        player.crystals = player.crystals.saturating_sub(item.crystals_per_use);
                     }
                     if item_result.should_consume_item {
                         let _ = world.delete_entity(item_entity);

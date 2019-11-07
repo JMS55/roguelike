@@ -23,8 +23,5 @@ pub fn drain_crystals_system(world: &mut World) {
         600..=699 => 5,
         _ => 10,
     };
-    player.crystals = player
-        .crystals
-        .checked_sub(crystals_to_subtract)
-        .unwrap_or(0);
+    player.crystals = player.crystals.saturating_sub(crystals_to_subtract);
 }

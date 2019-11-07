@@ -13,10 +13,10 @@ pub fn damage(
 ) -> (bool, u32) {
     let target_died = {
         let mut attackable_data = world.write_storage::<Attackable>();
-
         let target_attackable = attackable_data.get(target).unwrap();
-        if target_attackable.current_health == 0 {
-            return (true, 0);
+        if target_attackable.current_health == 0 || (is_magic && target_attackable.is_magic_immune)
+        {
+            return (false, 0);
         }
 
         if let Some(attacker) = attacker {
@@ -45,8 +45,7 @@ pub fn damage(
                     for spawner in (&mut spawner_data).join() {
                         spawner.turns_per_spawn = spawner
                             .turns_per_spawn
-                            .checked_sub(lower_spawn_times_by_turns)
-                            .unwrap_or(0);
+                            .saturating_sub(lower_spawn_times_by_turns);
                         if spawner.turns_per_spawn < 10 {
                             spawner.turns_per_spawn = 10;
                         }
@@ -62,12 +61,7 @@ pub fn damage(
         }
 
         let target_attackable = attackable_data.get_mut(target).unwrap();
-        if !(is_magic && target_attackable.is_magic_immune) {
-            target_attackable.current_health = target_attackable
-                .current_health
-                .checked_sub(damage)
-                .unwrap_or(0);
-        }
+        target_attackable.current_health = target_attackable.current_health.saturating_sub(damage);
 
         target_attackable.current_health == 0
     };

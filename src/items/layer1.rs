@@ -19,14 +19,13 @@ pub fn create_random_layer1(
     };
     if should_generate_item {
         let choices: Vec<fn(Option<Position>, &mut World) -> Entity> = match rarity {
-            Rarity::Common => vec![
-                create_jump_saber,
-                create_twister_staff,
-                create_edge_of_ebony,
-                create_blight_bow,
+            Rarity::Common => vec![create_jump_saber, create_edge_of_ebony, create_blight_bow],
+            Rarity::Uncommon => vec![
+                create_improvised_spellbook,
+                create_daybreak,
+                create_random_scroll,
             ],
-            Rarity::Uncommon => vec![create_improvised_spellbook, create_random_scroll],
-            Rarity::Rare => vec![create_netherbane],
+            Rarity::Rare => vec![create_twister_staff, create_netherbane],
             Rarity::Epic => vec![],
         };
         return Some(*choices.choose(rng).unwrap());
@@ -67,49 +66,6 @@ pub fn create_jump_saber(item_position: Option<Position>, world: &mut World) -> 
             }
         }))
         .with(Sprite::new("jump_saber"));
-    if let Some(item_position) = item_position {
-        e = e.with(item_position);
-    }
-    e.build()
-}
-
-pub fn create_twister_staff(item_position: Option<Position>, world: &mut World) -> Entity {
-    let mut e = world
-        .create_entity()
-        .with(Name::new("Twister Staff", false))
-        .with(Item::new(10, |_, world| {
-            if let Some(target_entity) = player_get_target(1, 2, world) {
-                let player_entity = {
-                    let entities = world.entities();
-                    let player_data = world.read_storage::<Player>();
-                    (&entities, &player_data).join().next().unwrap().0
-                };
-                let attack_result =
-                    try_attack(8, false, true, 1, 2, player_entity, target_entity, world);
-                match attack_result {
-                    Ok(false) => {
-                        let player_facing_direction = {
-                            let player_data = world.read_storage::<Player>();
-                            player_data.get(player_entity).unwrap().facing_direction
-                        };
-                        if try_move(target_entity, player_facing_direction, world).is_err() {
-                            damage(2, false, false, Some(player_entity), target_entity, world);
-                        }
-                    }
-                    _ => {}
-                }
-                ItemResult {
-                    should_end_turn: attack_result.is_ok(),
-                    should_consume_item: false,
-                }
-            } else {
-                ItemResult {
-                    should_end_turn: false,
-                    should_consume_item: false,
-                }
-            }
-        }))
-        .with(Sprite::new("twister_staff"));
     if let Some(item_position) = item_position {
         e = e.with(item_position);
     }
@@ -228,6 +184,87 @@ pub fn create_improvised_spellbook(item_position: Option<Position>, world: &mut 
             }
         }))
         .with(Sprite::new("improvised_spellbook"));
+    if let Some(item_position) = item_position {
+        e = e.with(item_position);
+    }
+    e.build()
+}
+
+pub fn create_daybreak(item_position: Option<Position>, world: &mut World) -> Entity {
+    let mut e = world
+        .create_entity()
+        .with(Name::new("Daybreak", false))
+        .with(Item::new(15, |_, world| {
+            let mut should_end_turn = false;
+            for range in &[1, 2] {
+                if let Some(target_entity) = player_get_target(*range, *range, world) {
+                    let player_entity = {
+                        let entities = world.entities();
+                        let player_data = world.read_storage::<Player>();
+                        (&entities, &player_data).join().next().unwrap().0
+                    };
+                    if try_attack(
+                        12,
+                        true,
+                        false,
+                        *range,
+                        *range,
+                        player_entity,
+                        target_entity,
+                        world,
+                    )
+                    .is_ok()
+                    {
+                        should_end_turn = true;
+                    }
+                }
+            }
+            ItemResult {
+                should_end_turn,
+                should_consume_item: false,
+            }
+        }))
+        .with(Sprite::new("daybreak"));
+    if let Some(item_position) = item_position {
+        e = e.with(item_position);
+    }
+    e.build()
+}
+
+pub fn create_twister_staff(item_position: Option<Position>, world: &mut World) -> Entity {
+    let mut e = world
+        .create_entity()
+        .with(Name::new("Twister Staff", false))
+        .with(Item::new(10, |_, world| {
+            if let Some(target_entity) = player_get_target(1, 2, world) {
+                let player_entity = {
+                    let entities = world.entities();
+                    let player_data = world.read_storage::<Player>();
+                    (&entities, &player_data).join().next().unwrap().0
+                };
+                let attack_result =
+                    try_attack(8, false, true, 1, 2, player_entity, target_entity, world);
+                if let Ok(false) = attack_result {
+                    let player_facing_direction = {
+                        let player_data = world.read_storage::<Player>();
+                        player_data.get(player_entity).unwrap().facing_direction
+                    };
+                    if try_move(target_entity, player_facing_direction, world).is_err() {
+                        damage(2, false, false, Some(player_entity), target_entity, world);
+                    }
+                }
+                ItemResult {
+                    should_end_turn: attack_result.is_ok(),
+                    should_consume_item: false,
+                }
+            } else {
+                ItemResult {
+                    should_end_turn: false,
+                    should_consume_item: false,
+                }
+            }
+        }))
+        .with(Sprite::new("twister_staff"));
     if let Some(item_position) = item_position {
         e = e.with(item_position);
     }
