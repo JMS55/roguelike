@@ -258,8 +258,24 @@ pub struct ItemResult {
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
 pub enum GameState {
     NewGame,
+    BagUI(BagUIState),
     PlayerTurn,
     EnemyTurn,
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
+pub struct BagUIState {
+    pub selected_x: i32,
+    pub selected_y: i32,
+}
+
+impl BagUIState {
+    pub fn new() -> BagUIState {
+        Self {
+            selected_x: 0,
+            selected_y: 0,
+        }
+    }
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]

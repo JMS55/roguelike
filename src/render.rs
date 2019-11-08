@@ -52,7 +52,7 @@ impl RenderSystem {
         let mut message_log = world.fetch_mut::<MessageLog>();
 
         let game_state = *world.fetch::<GameState>();
-        if game_state == GameState::PlayerTurn || game_state == GameState::EnemyTurn {
+        if let GameState::PlayerTurn | GameState::EnemyTurn | GameState::BagUI(_) = game_state {
             if !cfg!(debug_assertions) {
                 let player_attackable = (&player_data, &attackable_data).join().next().unwrap().1;
                 let player_health_percentage =
@@ -240,6 +240,48 @@ impl RenderSystem {
                     break;
                 };
             }
+        }
+
+        if let GameState::BagUI(bag_ui_state) = game_state {
+            let player = (&player_data).join().next().unwrap();
+            for x in 0..4 {
+                for y in 0..4 {
+                    let dest_rect =
+                        Rect::new(132 + (48 * x) + (8 * x), 48 * (y + 1) + 8 * (y + 1), 48, 48);
+                    let texture = texture_creator
+                        .load_texture(if y == 0 {
+                            "assets/ui_item_frame.png"
+                        } else {
+                            "assets/ui_item_frame2.png"
+                        })
+                        .unwrap();
+                    self.canvas.copy(&texture, None, dest_rect).unwrap();
+
+                    if let Some(item_entity) = player.inventory[x as usize + (y as usize * 4)] {
+                        let dest_rect = Rect::new(
+                            132 + (48 * x) + (8 * x) + 8,
+                            48 * (y + 1) + 8 * (y + 1) + 8,
+                            32,
+                            32,
+                        );
+                        let item_sprite = sprite_data.get(item_entity).unwrap();
+                        let texture = texture_creator
+                            .load_texture(format!("assets/{}.png", item_sprite.id))
+                            .unwrap();
+                        self.canvas.copy(&texture, None, dest_rect).unwrap();
+                    }
+                }
+            }
+            let dest_rect = Rect::new(
+                132 + (48 * bag_ui_state.selected_x) + (8 * bag_ui_state.selected_x),
+                48 * (bag_ui_state.selected_y + 1) + 8 * (bag_ui_state.selected_y + 1),
+                48,
+                48,
+            );
+            let texture = texture_creator
+                .load_texture("assets/ui_item_frame_selected.png")
+                .unwrap();
+            self.canvas.copy(&texture, None, dest_rect).unwrap();
         }
 
         self.canvas.present();
