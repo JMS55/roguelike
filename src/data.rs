@@ -264,18 +264,10 @@ pub enum GameState {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
-pub struct BagUIState {
-    pub selected_x: i32,
-    pub selected_y: i32,
-}
-
-impl BagUIState {
-    pub fn new() -> BagUIState {
-        Self {
-            selected_x: 0,
-            selected_y: 0,
-        }
-    }
+pub enum BagUIState {
+    Overview(i32, i32),           // Selected item slot (x, y)
+    ItemMenu(i32, i32, i32),      // Selected item slot (x, y), Selected menu option
+    MoveItem(i32, i32, i32, i32), // Selected item slot 1 (x, y), Selected item slot 2 (x, y)
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]

@@ -22,7 +22,7 @@ use spawn::tick_spawners;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Scancode;
-use specs::{World, WorldExt};
+use specs::{Join, World, WorldExt};
 use std::time::{Duration, Instant};
 
 fn main() {
@@ -55,18 +55,19 @@ fn main() {
     let mut previous_time = Instant::now();
     'game_loop: loop {
         {
-            let mut game_state = world.fetch_mut::<GameState>();
-
             for event in event_pump.poll_iter() {
                 if let Event::Quit { .. } = event {
                     break 'game_loop;
                 }
             }
+
+            let game_state = { *world.fetch::<GameState>() };
+
             let keyboard = event_pump.keyboard_state();
             if keyboard.is_scancode_pressed(Scancode::Escape) {
                 break 'game_loop;
             }
-            if *game_state == GameState::PlayerTurn
+            if game_state == GameState::PlayerTurn
                 && last_input_time.elapsed() >= Duration::from_millis(150)
             {
                 let mut keystate = (0, 0, true);
@@ -147,56 +148,202 @@ fn main() {
                 if keyboard.is_scancode_pressed(Scancode::Space) {
                     last_input_time = Instant::now();
                     player_controller_system.action = PlayerAction::None;
-                    *game_state = GameState::BagUI(BagUIState::new());
+                    *world.fetch_mut::<GameState>() = GameState::BagUI(BagUIState::Overview(0, 0));
                 }
             }
 
-            if let GameState::BagUI(bag_ui_state) = &mut *game_state {
+            if let GameState::BagUI(bag_ui_state) = game_state {
                 if last_input_time.elapsed() >= Duration::from_millis(150) {
-                    let mut keystate = (0, 0);
-                    if keyboard.is_scancode_pressed(Scancode::W)
-                        || keyboard.is_scancode_pressed(Scancode::Up)
+                    let mut new_bag_ui_state;
+                    match bag_ui_state {
+                        BagUIState::Overview(ref selected_item_x, ref selected_item_y) => {
+                            let mut keystate = (0, 0);
+                            if keyboard.is_scancode_pressed(Scancode::W)
+                                || keyboard.is_scancode_pressed(Scancode::Up)
+                            {
+                                last_input_time = Instant::now();
+                                keystate.1 = -1;
+                            }
+                            if keyboard.is_scancode_pressed(Scancode::A)
+                                || keyboard.is_scancode_pressed(Scancode::Left)
+                            {
+                                last_input_time = Instant::now();
+                                player_controller_system.action =
+                                    PlayerAction::Turn(Direction::Left);
+                                keystate.0 = -1;
+                            }
+                            if keyboard.is_scancode_pressed(Scancode::S)
+                                || keyboard.is_scancode_pressed(Scancode::Down)
+                            {
+                                last_input_time = Instant::now();
+                                player_controller_system.action =
+                                    PlayerAction::Turn(Direction::Down);
+                                keystate.1 = 1;
+                            }
+                            if keyboard.is_scancode_pressed(Scancode::D)
+                                || keyboard.is_scancode_pressed(Scancode::Right)
+                            {
+                                last_input_time = Instant::now();
+                                keystate.0 = 1;
+                            }
+                            new_bag_ui_state = BagUIState::Overview(
+                                (*selected_item_x + keystate.0).rem_euclid(4),
+                                (*selected_item_y + keystate.1).rem_euclid(4),
+                            );
+                            if keyboard.is_scancode_pressed(Scancode::Return) {
+                                last_input_time = Instant::now();
+                                let item_entity = {
+                                    let mut player_data = world.write_storage::<Player>();
+                                    let player = (&mut player_data).join().next().unwrap();
+                                    let index = (*selected_item_x + *selected_item_y * 4) as usize;
+                                    player.inventory[index]
+                                };
+                                if item_entity.is_some() {
+                                    new_bag_ui_state =
+                                        BagUIState::ItemMenu(*selected_item_x, *selected_item_y, 0);
+                                }
+                            }
+                        }
+                        BagUIState::ItemMenu(
+                            ref selected_item_x,
+                            ref selected_item_y,
+                            ref selected_menu_option,
+                        ) => {
+                            let mut keystate = 0;
+                            if keyboard.is_scancode_pressed(Scancode::W)
+                                || keyboard.is_scancode_pressed(Scancode::Up)
+                            {
+                                last_input_time = Instant::now();
+                                keystate = -1;
+                            }
+                            if keyboard.is_scancode_pressed(Scancode::A)
+                                || keyboard.is_scancode_pressed(Scancode::Left)
+                            {
+                                last_input_time = Instant::now();
+                                player_controller_system.action =
+                                    PlayerAction::Turn(Direction::Left);
+                                keystate = -1;
+                            }
+                            if keyboard.is_scancode_pressed(Scancode::S)
+                                || keyboard.is_scancode_pressed(Scancode::Down)
+                            {
+                                last_input_time = Instant::now();
+                                player_controller_system.action =
+                                    PlayerAction::Turn(Direction::Down);
+                                keystate = 1;
+                            }
+                            if keyboard.is_scancode_pressed(Scancode::D)
+                                || keyboard.is_scancode_pressed(Scancode::Right)
+                            {
+                                last_input_time = Instant::now();
+                                keystate = 1;
+                            }
+                            new_bag_ui_state = BagUIState::ItemMenu(
+                                *selected_item_x,
+                                *selected_item_y,
+                                (*selected_menu_option + keystate).rem_euclid(3),
+                            );
+                            if keyboard.is_scancode_pressed(Scancode::Return) {
+                                last_input_time = Instant::now();
+                                new_bag_ui_state = match selected_menu_option {
+                                    0 => BagUIState::Overview(*selected_item_x, *selected_item_y),
+                                    1 => BagUIState::MoveItem(
+                                        *selected_item_x,
+                                        *selected_item_y,
+                                        if *selected_item_x == 0 && *selected_item_y == 0 {
+                                            1
+                                        } else {
+                                            0
+                                        },
+                                        0,
+                                    ),
+                                    2 => {
+                                        let item_entity = {
+                                            let mut player_data = world.write_storage::<Player>();
+                                            let player = (&mut player_data).join().next().unwrap();
+                                            let index =
+                                                (*selected_item_x + *selected_item_y * 4) as usize;
+                                            player.inventory[index].take()
+                                        };
+                                        if let Some(item_entity) = item_entity {
+                                            world.delete_entity(item_entity).unwrap();
+                                        }
+                                        BagUIState::Overview(*selected_item_x, *selected_item_y)
+                                    }
+                                    _ => unreachable!(),
+                                }
+                            }
+                        }
+                        BagUIState::MoveItem(
+                            ref selected_item1_x,
+                            ref selected_item1_y,
+                            ref selected_item2_x,
+                            ref selected_item2_y,
+                        ) => {
+                            let mut keystate = (0, 0);
+                            if keyboard.is_scancode_pressed(Scancode::W)
+                                || keyboard.is_scancode_pressed(Scancode::Up)
+                            {
+                                last_input_time = Instant::now();
+                                keystate.1 = -1;
+                            }
+                            if keyboard.is_scancode_pressed(Scancode::A)
+                                || keyboard.is_scancode_pressed(Scancode::Left)
+                            {
+                                last_input_time = Instant::now();
+                                player_controller_system.action =
+                                    PlayerAction::Turn(Direction::Left);
+                                keystate.0 = -1;
+                            }
+                            if keyboard.is_scancode_pressed(Scancode::S)
+                                || keyboard.is_scancode_pressed(Scancode::Down)
+                            {
+                                last_input_time = Instant::now();
+                                player_controller_system.action =
+                                    PlayerAction::Turn(Direction::Down);
+                                keystate.1 = 1;
+                            }
+                            if keyboard.is_scancode_pressed(Scancode::D)
+                                || keyboard.is_scancode_pressed(Scancode::Right)
+                            {
+                                last_input_time = Instant::now();
+                                keystate.0 = 1;
+                            }
+                            let new_2x = (*selected_item2_x + keystate.0).rem_euclid(4);
+                            let new_2y = (*selected_item2_y + keystate.1).rem_euclid(4);
+                            new_bag_ui_state = BagUIState::MoveItem(
+                                *selected_item1_x,
+                                *selected_item1_y,
+                                new_2x,
+                                new_2y,
+                            );
+                            if keyboard.is_scancode_pressed(Scancode::Return) {
+                                last_input_time = Instant::now();
+                                let mut player_data = world.write_storage::<Player>();
+                                let player = (&mut player_data).join().next().unwrap();
+                                let index_1 = (selected_item1_x + selected_item1_y * 4) as usize;
+                                let index_2 = (new_2x + new_2y * 4) as usize;
+                                player.inventory.swap(index_1, index_2);
+                                if (index_1 <= 3 && index_2 > 3) || (index_2 <= 3 && index_1 > 3) {
+                                    player_controller_system.action = PlayerAction::Pass;
+                                    *world.fetch_mut::<GameState>() = GameState::PlayerTurn;
+                                }
+                                new_bag_ui_state =
+                                    BagUIState::Overview(*selected_item1_x, *selected_item1_y);
+                            }
+                        }
+                    }
                     {
-                        last_input_time = Instant::now();
-                        keystate.1 = -1;
+                        let mut game_state = world.fetch_mut::<GameState>();
+                        match *game_state {
+                            GameState::BagUI(_) => *game_state = GameState::BagUI(new_bag_ui_state),
+                            _ => {}
+                        }
                     }
-                    if keyboard.is_scancode_pressed(Scancode::A)
-                        || keyboard.is_scancode_pressed(Scancode::Left)
-                    {
-                        last_input_time = Instant::now();
-                        player_controller_system.action = PlayerAction::Turn(Direction::Left);
-                        keystate.0 = -1;
-                    }
-                    if keyboard.is_scancode_pressed(Scancode::S)
-                        || keyboard.is_scancode_pressed(Scancode::Down)
-                    {
-                        last_input_time = Instant::now();
-                        player_controller_system.action = PlayerAction::Turn(Direction::Down);
-                        keystate.1 = 1;
-                    }
-                    if keyboard.is_scancode_pressed(Scancode::D)
-                        || keyboard.is_scancode_pressed(Scancode::Right)
-                    {
-                        last_input_time = Instant::now();
-                        keystate.0 = 1;
-                    }
-                    bag_ui_state.selected_x += keystate.0;
-                    bag_ui_state.selected_y += keystate.1;
-                    if bag_ui_state.selected_x < 0 {
-                        bag_ui_state.selected_x = 3;
-                    }
-                    if bag_ui_state.selected_x > 3 {
-                        bag_ui_state.selected_x = 0;
-                    }
-                    if bag_ui_state.selected_y < 0 {
-                        bag_ui_state.selected_y = 3;
-                    }
-                    if bag_ui_state.selected_y > 3 {
-                        bag_ui_state.selected_y = 0;
-                    }
+
                     if keyboard.is_scancode_pressed(Scancode::Space) {
                         last_input_time = Instant::now();
-                        *game_state = GameState::PlayerTurn;
+                        *world.fetch_mut::<GameState>() = GameState::PlayerTurn;
                     }
                 }
             }

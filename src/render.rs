@@ -1,6 +1,4 @@
-use crate::data::{
-    Attackable, Direction, GameState, MessageColor, MessageLog, Player, Position, Sprite,
-};
+use crate::data::*;
 use noise::{NoiseFn, OpenSimplex};
 use sdl2::image::LoadTexture;
 use sdl2::pixels::{Color, PixelFormatEnum};
@@ -243,45 +241,130 @@ impl RenderSystem {
         }
 
         if let GameState::BagUI(bag_ui_state) = game_state {
-            let player = (&player_data).join().next().unwrap();
-            for x in 0..4 {
-                for y in 0..4 {
-                    let dest_rect =
-                        Rect::new(132 + (48 * x) + (8 * x), 48 * (y + 1) + 8 * (y + 1), 48, 48);
+            match bag_ui_state {
+                BagUIState::Overview(selected_item_x, selected_item_y)
+                | BagUIState::ItemMenu(selected_item_x, selected_item_y, _)
+                | BagUIState::MoveItem(selected_item_x, selected_item_y, _, _) => {
+                    let player = (&player_data).join().next().unwrap();
+                    for x in 0..4 {
+                        for y in 0..4 {
+                            let dest_rect = Rect::new(
+                                132 + (48 * x) + (8 * x),
+                                48 * (y + 1) + 8 * (y + 1),
+                                48,
+                                48,
+                            );
+                            let texture = texture_creator
+                                .load_texture(if y == 0 {
+                                    "assets/ui_item_frame.png"
+                                } else {
+                                    "assets/ui_item_frame2.png"
+                                })
+                                .unwrap();
+                            self.canvas.copy(&texture, None, dest_rect).unwrap();
+
+                            if let Some(item_entity) =
+                                player.inventory[x as usize + (y as usize * 4)]
+                            {
+                                let dest_rect = Rect::new(
+                                    132 + (48 * x) + (8 * x) + 8,
+                                    48 * (y + 1) + 8 * (y + 1) + 8,
+                                    32,
+                                    32,
+                                );
+                                let item_sprite = sprite_data.get(item_entity).unwrap();
+                                let texture = texture_creator
+                                    .load_texture(format!("assets/{}.png", item_sprite.id))
+                                    .unwrap();
+                                self.canvas.copy(&texture, None, dest_rect).unwrap();
+                            }
+                        }
+                    }
+                    let dest_rect = Rect::new(
+                        132 + (48 * selected_item_x) + (8 * selected_item_x),
+                        48 * (selected_item_y + 1) + 8 * (selected_item_y + 1),
+                        48,
+                        48,
+                    );
                     let texture = texture_creator
-                        .load_texture(if y == 0 {
-                            "assets/ui_item_frame.png"
-                        } else {
-                            "assets/ui_item_frame2.png"
-                        })
+                        .load_texture("assets/ui_item_frame_selected.png")
                         .unwrap();
                     self.canvas.copy(&texture, None, dest_rect).unwrap();
-
-                    if let Some(item_entity) = player.inventory[x as usize + (y as usize * 4)] {
-                        let dest_rect = Rect::new(
-                            132 + (48 * x) + (8 * x) + 8,
-                            48 * (y + 1) + 8 * (y + 1) + 8,
-                            32,
-                            32,
-                        );
-                        let item_sprite = sprite_data.get(item_entity).unwrap();
-                        let texture = texture_creator
-                            .load_texture(format!("assets/{}.png", item_sprite.id))
-                            .unwrap();
-                        self.canvas.copy(&texture, None, dest_rect).unwrap();
-                    }
                 }
             }
-            let dest_rect = Rect::new(
-                132 + (48 * bag_ui_state.selected_x) + (8 * bag_ui_state.selected_x),
-                48 * (bag_ui_state.selected_y + 1) + 8 * (bag_ui_state.selected_y + 1),
-                48,
-                48,
-            );
-            let texture = texture_creator
-                .load_texture("assets/ui_item_frame_selected.png")
-                .unwrap();
-            self.canvas.copy(&texture, None, dest_rect).unwrap();
+            if let BagUIState::ItemMenu(selected_item_x, selected_item_y, item_menu_option) =
+                bag_ui_state
+            {
+                let dest_rect = Rect::new(
+                    132 + (48 * selected_item_x) + (8 * selected_item_x) + 48,
+                    48 * (selected_item_y + 1) + 8 * (selected_item_y + 1),
+                    48,
+                    16,
+                );
+                let surface = font
+                    .render("Cancel")
+                    .blended(if item_menu_option == 0 {
+                        Color::RGBA(255, 255, 255, 255)
+                    } else {
+                        Color::RGBA(200, 200, 200, 255)
+                    })
+                    .unwrap();
+                let texture = texture_creator
+                    .create_texture_from_surface(&surface)
+                    .unwrap();
+                self.canvas.fill_rect(dest_rect).unwrap();
+                self.canvas.copy(&texture, None, dest_rect).unwrap();
+                let dest_rect = Rect::new(
+                    132 + (48 * selected_item_x) + (8 * selected_item_x) + 48,
+                    48 * (selected_item_y + 1) + 8 * (selected_item_y + 1) + 16,
+                    48,
+                    16,
+                );
+                let surface = font
+                    .render("Move")
+                    .blended(if item_menu_option == 1 {
+                        Color::RGBA(255, 255, 255, 255)
+                    } else {
+                        Color::RGBA(200, 200, 200, 255)
+                    })
+                    .unwrap();
+                let texture = texture_creator
+                    .create_texture_from_surface(&surface)
+                    .unwrap();
+                self.canvas.fill_rect(dest_rect).unwrap();
+                self.canvas.copy(&texture, None, dest_rect).unwrap();
+                let dest_rect = Rect::new(
+                    132 + (48 * selected_item_x) + (8 * selected_item_x) + 48,
+                    48 * (selected_item_y + 1) + 8 * (selected_item_y + 1) + 32,
+                    48,
+                    16,
+                );
+                let surface = font
+                    .render("Delete")
+                    .blended(if item_menu_option == 2 {
+                        Color::RGBA(255, 255, 255, 255)
+                    } else {
+                        Color::RGBA(200, 200, 200, 255)
+                    })
+                    .unwrap();
+                let texture = texture_creator
+                    .create_texture_from_surface(&surface)
+                    .unwrap();
+                self.canvas.fill_rect(dest_rect).unwrap();
+                self.canvas.copy(&texture, None, dest_rect).unwrap();
+            }
+            if let BagUIState::MoveItem(_, _, selected_item2_x, selected_item2_y) = bag_ui_state {
+                let dest_rect = Rect::new(
+                    132 + (48 * selected_item2_x) + (8 * selected_item2_x),
+                    48 * (selected_item2_y + 1) + 8 * (selected_item2_y + 1),
+                    48,
+                    48,
+                );
+                let texture = texture_creator
+                    .load_texture("assets/ui_item_frame_selected2.png")
+                    .unwrap();
+                self.canvas.copy(&texture, None, dest_rect).unwrap();
+            }
         }
 
         self.canvas.present();
