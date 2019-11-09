@@ -409,16 +409,6 @@ impl RenderSystem {
                     self.canvas.fill_rect(dest_rect).unwrap();
                     self.canvas.copy(&texture, None, dest_rect).unwrap();
                 }
-                let dest_rect = Rect::new(
-                    132 + (48 * selected_item2_x) + (8 * selected_item2_x),
-                    48 * (selected_item2_y + 1) + 8 * (selected_item2_y + 1),
-                    48,
-                    48,
-                );
-                let texture = texture_creator
-                    .load_texture("assets/ui_item_frame_selected.png")
-                    .unwrap();
-                self.canvas.copy(&texture, None, dest_rect).unwrap();
             }
         }
 
