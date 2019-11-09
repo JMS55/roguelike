@@ -280,6 +280,28 @@ impl RenderSystem {
                             }
                         }
                     }
+                    let index = (selected_item_x + selected_item_y * 4) as usize;
+                    if let Some(item_entity) = player.inventory[index] {
+                        let name_data = world.read_storage::<Name>();
+                        let item_name = name_data.get(item_entity).unwrap();
+                        let surface = font
+                            .render(item_name.get_text())
+                            .blended(Color::RGBA(255, 255, 255, 255))
+                            .unwrap();
+                        let texture = texture_creator
+                            .create_texture_from_surface(&surface)
+                            .unwrap();
+                        let texture_info = texture.query();
+                        let dest_rect = Rect::new(
+                            132 + (48 * selected_item_x) + (8 * selected_item_x) + 24
+                                - (texture_info.width / 2) as i32,
+                            48 * (selected_item_y + 1) + 8 * (selected_item_y + 1) - 16,
+                            texture_info.width,
+                            16,
+                        );
+                        self.canvas.fill_rect(dest_rect).unwrap();
+                        self.canvas.copy(&texture, None, dest_rect).unwrap();
+                    }
                     let dest_rect = Rect::new(
                         132 + (48 * selected_item_x) + (8 * selected_item_x),
                         48 * (selected_item_y + 1) + 8 * (selected_item_y + 1),
@@ -362,6 +384,39 @@ impl RenderSystem {
                 );
                 let texture = texture_creator
                     .load_texture("assets/ui_item_frame_selected2.png")
+                    .unwrap();
+                self.canvas.copy(&texture, None, dest_rect).unwrap();
+                let player = (&player_data).join().next().unwrap();
+                let index = (selected_item2_x + selected_item2_y * 4) as usize;
+                if let Some(item_entity) = player.inventory[index] {
+                    let name_data = world.read_storage::<Name>();
+                    let item_name = name_data.get(item_entity).unwrap();
+                    let surface = font
+                        .render(item_name.get_text())
+                        .blended(Color::RGBA(255, 255, 255, 255))
+                        .unwrap();
+                    let texture = texture_creator
+                        .create_texture_from_surface(&surface)
+                        .unwrap();
+                    let texture_info = texture.query();
+                    let dest_rect = Rect::new(
+                        132 + (48 * selected_item2_x) + (8 * selected_item2_x) + 24
+                            - (texture_info.width / 2) as i32,
+                        48 * (selected_item2_y + 1) + 8 * (selected_item2_y + 1) - 16,
+                        texture_info.width,
+                        16,
+                    );
+                    self.canvas.fill_rect(dest_rect).unwrap();
+                    self.canvas.copy(&texture, None, dest_rect).unwrap();
+                }
+                let dest_rect = Rect::new(
+                    132 + (48 * selected_item2_x) + (8 * selected_item2_x),
+                    48 * (selected_item2_y + 1) + 8 * (selected_item2_y + 1),
+                    48,
+                    48,
+                );
+                let texture = texture_creator
+                    .load_texture("assets/ui_item_frame_selected.png")
                     .unwrap();
                 self.canvas.copy(&texture, None, dest_rect).unwrap();
             }
