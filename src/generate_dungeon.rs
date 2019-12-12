@@ -1,17 +1,20 @@
 use crate::components::*;
+use crate::entities;
 use crate::game::{Game, Message, MessageColor};
 use rand::Rng;
 use std::collections::HashSet;
 
 pub fn generate_dungeon(game: &mut Game) {
+    game.rooms.clear();
+    game.floor_positions.clear();
+
     // Place rooms
-    let mut rooms = Vec::with_capacity(41);
     let starting_room = Room {
         center: PositionComponent { x: 0, y: 0 },
         x_radius: 3,
         y_radius: 3,
     };
-    rooms.push(starting_room);
+    game.rooms.push(starting_room);
     'room_placing_loop: for _ in 0..200 {
         let room = Room {
             center: PositionComponent {
@@ -21,7 +24,7 @@ pub fn generate_dungeon(game: &mut Game) {
             x_radius: game.dungeon_generation_rng.gen_range(2, 8),
             y_radius: game.dungeon_generation_rng.gen_range(2, 8),
         };
-        for other_room in &rooms {
+        for other_room in &game.rooms {
             let required_gap = game.dungeon_generation_rng.gen_range(3, 10);
             let x_gap = (room.center.x - other_room.center.x).abs()
                 - room.x_radius as i16
@@ -36,17 +39,16 @@ pub fn generate_dungeon(game: &mut Game) {
                 continue 'room_placing_loop;
             }
         }
-        rooms.push(room);
+        game.rooms.push(room);
     }
 
     // Place corridors
-    let mut corridor_positions = HashSet::with_capacity((rooms.len() / 2) * 12);
-    for (start_room_index, start_room) in rooms.iter().enumerate() {
-        let mut end_room_index = game.dungeon_generation_rng.gen_range(0, rooms.len());
+    for (start_room_index, start_room) in game.rooms.iter().enumerate() {
+        let mut end_room_index = game.dungeon_generation_rng.gen_range(0, game.rooms.len());
         while end_room_index == start_room_index {
-            end_room_index = game.dungeon_generation_rng.gen_range(0, rooms.len());
+            end_room_index = game.dungeon_generation_rng.gen_range(0, game.rooms.len());
         }
-        let end_room = &rooms[end_room_index];
+        let end_room = &game.rooms[end_room_index];
         let start_x = game.dungeon_generation_rng.gen_range(
             start_room.center.x - start_room.x_radius as i16,
             start_room.center.x + start_room.x_radius as i16 + 1,
@@ -64,17 +66,19 @@ pub fn generate_dungeon(game: &mut Game) {
             end_room.center.y + end_room.y_radius as i16 + 1,
         );
         for x in start_x.min(end_x)..start_x.max(end_x) {
-            corridor_positions.insert(PositionComponent { x, y: start_y });
+            game.floor_positions
+                .insert(PositionComponent { x, y: start_y });
         }
         for y in start_y.min(end_y)..=start_y.max(end_y) {
-            corridor_positions.insert(PositionComponent { x: end_x, y });
+            game.floor_positions
+                .insert(PositionComponent { x: end_x, y });
         }
     }
 
     // Get list of all wall positions
     let mut wall_positions =
-        HashSet::with_capacity(rooms.len() * 36 + corridor_positions.len() * 3);
-    for room in &rooms {
+        HashSet::with_capacity(game.rooms.len() * 36 + game.floor_positions.len() * 3);
+    for room in &game.rooms {
         let x_radius = room.x_radius as i16;
         let y_radius = room.y_radius as i16;
         for x in -(x_radius + 1)..=(x_radius + 1) {
@@ -98,9 +102,9 @@ pub fn generate_dungeon(game: &mut Game) {
             });
         }
     }
-    for corridor_position in &corridor_positions {
+    for corridor_position in &game.floor_positions {
         'neighbor_loop: for (x, y) in &corridor_position.get_neighbors() {
-            for room in &rooms {
+            for room in &game.rooms {
                 let x_radius = room.x_radius as i16;
                 let y_radius = room.y_radius as i16;
                 let x_range = (room.center.x - x_radius - 1)..=(room.center.x + x_radius + 1);
@@ -113,33 +117,29 @@ pub fn generate_dungeon(game: &mut Game) {
         }
     }
 
-    // Create floor entities
-    for room in &rooms {
+    // Update list of floor tiles with floor tiles from rooms
+    for room in &game.rooms {
         let x_radius = room.x_radius as i16;
         let y_radius = room.y_radius as i16;
         for x in -x_radius..=x_radius {
             for y in -y_radius..=y_radius {
-                create_floor(
-                    PositionComponent {
-                        x: room.center.x + x,
-                        y: room.center.y + y,
-                    },
-                    game,
-                );
+                game.floor_positions.insert(PositionComponent {
+                    x: room.center.x + x,
+                    y: room.center.y + y,
+                });
             }
         }
     }
-    for corridor_position in &corridor_positions {
-        create_floor(*corridor_position, game);
-    }
 
     // Create wall entities
-    for wall_position in wall_positions.difference(&corridor_positions) {
-        create_wall(*wall_position, game);
-    }
+    entities::create_walls(
+        wall_positions.difference(&game.floor_positions).cloned(),
+        &mut game.world,
+        &mut game.dungeon_generation_rng,
+    );
 
     // Create staircase entity
-    let staircase_room = &rooms[1];
+    let staircase_room = &game.rooms[1];
     let staircase_x = game.dungeon_generation_rng.gen_range(
         staircase_room.center.x - staircase_room.x_radius as i16 + 1,
         staircase_room.center.x + staircase_room.x_radius as i16,
@@ -148,12 +148,12 @@ pub fn generate_dungeon(game: &mut Game) {
         staircase_room.center.y - staircase_room.y_radius as i16 + 1,
         staircase_room.center.y + staircase_room.y_radius as i16,
     );
-    create_staircase(
+    entities::create_staircase(
         PositionComponent {
             x: staircase_x,
             y: staircase_y,
         },
-        game,
+        &mut game.world,
     );
 
     // Display message
@@ -164,71 +164,10 @@ pub fn generate_dungeon(game: &mut Game) {
     ));
 }
 
-struct Room {
+pub struct Room {
     center: PositionComponent,
     x_radius: u16,
     y_radius: u16,
-}
-
-fn create_floor(position: PositionComponent, game: &mut Game) {
-    game.world.insert(
-        (),
-        Some((
-            NameComponent {
-                name: "Floor",
-                concealed_name: "Floor",
-                is_concealed: false,
-            },
-            position,
-            IntangibleComponent {},
-            SpriteComponent {
-                id: "floor",
-                in_foreground: false,
-            },
-        )),
-    );
-}
-
-fn create_wall(position: PositionComponent, game: &mut Game) {
-    let sprite_id = if game.rng.gen_ratio(1, 4) {
-        "wall_mossy"
-    } else {
-        "wall"
-    };
-    game.world.insert(
-        (),
-        Some((
-            NameComponent {
-                name: "Wall",
-                concealed_name: "Wall",
-                is_concealed: false,
-            },
-            position,
-            SpriteComponent {
-                id: sprite_id,
-                in_foreground: true,
-            },
-        )),
-    );
-}
-
-fn create_staircase(position: PositionComponent, game: &mut Game) {
-    game.world.insert(
-        (),
-        Some((
-            NameComponent {
-                name: "Staircase",
-                concealed_name: "Staircase",
-                is_concealed: false,
-            },
-            position,
-            SpriteComponent {
-                id: "staircase",
-                in_foreground: true,
-            },
-            StaircaseComponent {},
-        )),
-    );
 }
 
 impl PositionComponent {

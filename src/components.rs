@@ -15,12 +15,8 @@ pub struct PositionComponent {
 }
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub struct IntangibleComponent {}
-
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct SpriteComponent {
     pub id: &'static str,
-    pub in_foreground: bool,
 }
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
