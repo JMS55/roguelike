@@ -1,4 +1,4 @@
-use crate::components::*;
+use crate::components::PositionComponent;
 use crate::entities;
 use crate::game::{Game, Message, MessageColor};
 use rand::Rng;
@@ -165,9 +165,9 @@ pub fn generate_dungeon(game: &mut Game) {
 }
 
 pub struct Room {
-    center: PositionComponent,
-    x_radius: u16,
-    y_radius: u16,
+    pub center: PositionComponent,
+    pub x_radius: u16,
+    pub y_radius: u16,
 }
 
 impl PositionComponent {

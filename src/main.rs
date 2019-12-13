@@ -5,6 +5,7 @@ mod game;
 mod generate_dungeon;
 mod items;
 mod movement;
+mod spawn_enemies;
 mod stages;
 
 use sdl2::event::Event;

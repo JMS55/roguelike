@@ -1,5 +1,6 @@
 use crate::components::*;
 use crate::generate_dungeon::{generate_dungeon, Room};
+use crate::spawn_enemies::spawn_enemies;
 use legion::entity::Entity;
 use legion::query::{IntoQuery, Read};
 use legion::world::World;
@@ -13,7 +14,7 @@ use sdl2::render::{TextureCreator, WindowCanvas};
 use sdl2::ttf::Font;
 use sdl2::video::WindowContext;
 use std::collections::HashSet;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 pub struct Game {
     pub world: World,
@@ -56,7 +57,7 @@ impl Game {
             Some((
                 NameComponent {
                     name: "Player",
-                    concealed_name: "Player",
+                    concealed_name: "???",
                     is_concealed: false,
                 },
                 PositionComponent { x: 0, y: 0 },
@@ -78,7 +79,7 @@ impl Game {
             )),
         )[0];
 
-        let mut this = Self {
+        let mut game = Self {
             world,
             player_entity,
             rooms,
@@ -96,9 +97,10 @@ impl Game {
             previous_background_color_modifier,
         };
 
-        generate_dungeon(&mut this);
+        generate_dungeon(&mut game);
+        spawn_enemies(&mut game);
 
-        this
+        game
     }
 
     pub fn render(
@@ -110,12 +112,17 @@ impl Game {
     ) {
         canvas.clear();
 
+        let player_position = *self
+            .world
+            .get_component::<PositionComponent>(self.player_entity)
+            .unwrap();
+        let player_combat = *self
+            .world
+            .get_component::<CombatComponent>(self.player_entity)
+            .unwrap();
+
         // Render background
         {
-            let player_combat = *self
-                .world
-                .get_component::<CombatComponent>(self.player_entity)
-                .unwrap();
             let player_health_percentage =
                 player_combat.current_health as f64 / player_combat.max_health as f64;
             let mut t = self.start_of_background_render.elapsed().as_secs_f64();
@@ -160,11 +167,6 @@ impl Game {
             texture.update(None, &pixel_data, 480 * 3).unwrap();
             canvas.copy(&texture, None, None).unwrap();
         }
-
-        let player_position = *self
-            .world
-            .get_component::<PositionComponent>(self.player_entity)
-            .unwrap();
 
         // Render floor tiles
         {
@@ -213,8 +215,11 @@ impl Game {
         canvas.present();
     }
 
-    pub fn recent_messages(&self) -> Vec<Message> {
-        unimplemented!("TODO: Start at end of list and go backwards until a message that is too old is reached");
+    pub fn recent_messages(&self) -> impl Iterator<Item = &Message> {
+        self.message_log
+            .iter()
+            .rev()
+            .take_while(|message| message.time_created.elapsed() <= Duration::from_secs(4))
     }
 }
 
