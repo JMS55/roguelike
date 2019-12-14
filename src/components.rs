@@ -1,4 +1,5 @@
 use crate::game::Game;
+use crate::movement::Direction;
 use legion::entity::Entity;
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
@@ -31,7 +32,7 @@ pub struct CombatComponent {
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct PlayerComponent {
-    pub facing_direction: (bool, bool),
+    pub facing_direction: Direction,
     pub inventory: [Option<Entity>; 16],
     pub turns_before_passive_healing: u16,
 }

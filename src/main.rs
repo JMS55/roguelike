@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 mod combat;
 mod components;
 mod entities;
@@ -47,9 +49,7 @@ fn main() {
 
             // Update
             while time_accumulator >= DELTA_TIME {
-                if let Some(new_stage) = stage.update() {
-                    stage = new_stage;
-                }
+                stage = stage.update();
                 time_accumulator -= DELTA_TIME;
             }
 

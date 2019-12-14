@@ -76,8 +76,7 @@ pub fn generate_dungeon(game: &mut Game) {
     }
 
     // Get list of all wall positions
-    let mut wall_positions =
-        HashSet::with_capacity(game.rooms.len() * 36 + game.floor_positions.len() * 3);
+    let mut wall_positions = HashSet::with_capacity(1600);
     for room in &game.rooms {
         let x_radius = room.x_radius as i16;
         let y_radius = room.y_radius as i16;
