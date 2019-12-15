@@ -5,7 +5,7 @@ use legion::query::{IntoQuery, Read};
 
 pub fn try_move(entity: Entity, direction: Direction, game: &mut Game) -> Result<(), ()> {
     if entity == game.player_entity {
-        turn(direction, game);
+        turn_player_towards(direction, game);
     }
 
     if can_move(entity, direction, game) {
@@ -53,12 +53,12 @@ pub fn can_move(entity: Entity, direction: Direction, game: &Game) -> bool {
         x: entity_position.x + offset.x,
         y: entity_position.y + offset.y,
     };
-    <(Read<PositionComponent>)>::query()
+    Read::<PositionComponent>::query()
         .iter_immutable(&game.world)
         .all(|position| *position != new_entity_position)
 }
 
-pub fn turn(direction: Direction, game: &mut Game) {
+pub fn turn_player_towards(direction: Direction, game: &mut Game) {
     game.world
         .get_component_mut::<PlayerComponent>(game.player_entity)
         .unwrap()

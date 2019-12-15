@@ -60,6 +60,7 @@ pub fn create_random_enemy(
         create_volatile_husk,
         create_arcane_ooze,
         create_soul_spectre,
+        create_mimic,
     ]
     .choose(rng)
     .unwrap();
@@ -173,6 +174,23 @@ pub fn create_soul_spectre(position: PositionComponent, world: &mut World) -> En
             },
             position,
             SpriteComponent { id: "soul_spectre" },
+        )),
+    )[0]
+}
+
+pub fn create_mimic(position: PositionComponent, world: &mut World) -> Entity {
+    world.insert(
+        (),
+        Some((
+            NameComponent {
+                name: "Staircase",
+                concealed_name: "???",
+                is_concealed: false,
+            },
+            position,
+            SpriteComponent {
+                id: "mimic_disguised",
+            },
         )),
     )[0]
 }

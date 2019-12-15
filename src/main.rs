@@ -44,7 +44,8 @@ fn main() {
             stage.input(&event_pump.keyboard_state());
 
             let current_time = Instant::now();
-            time_accumulator += current_time - previous_time;
+            let time_since_last_frame = current_time - previous_time;
+            time_accumulator += time_since_last_frame;
             previous_time = current_time;
 
             // Update
@@ -54,12 +55,14 @@ fn main() {
             }
 
             // Render
+            canvas.clear();
             stage.render(
                 &mut canvas,
                 &mut texture_creator,
                 &mut font,
-                time_accumulator.as_secs_f64() / DELTA_TIME.as_secs_f64(),
+                time_since_last_frame,
             );
+            canvas.present();
         }
     }
 }

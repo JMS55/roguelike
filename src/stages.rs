@@ -1,5 +1,9 @@
+use crate::components::*;
 use crate::game::Game;
-use crate::movement::{try_move, turn, Direction};
+use crate::generate_dungeon::generate_dungeon;
+use crate::movement::{try_move, turn_player_towards, Direction};
+use legion::filter::filter_fns;
+use legion::query::{IntoQuery, Read};
 use sdl2::keyboard::{KeyboardState, Scancode};
 use sdl2::render::{TextureCreator, WindowCanvas};
 use sdl2::ttf::Font;
@@ -16,7 +20,7 @@ pub trait Stage {
         canvas: &mut WindowCanvas,
         texture_creator: &mut TextureCreator<WindowContext>,
         font: &mut Font,
-        delta_time: f64,
+        time_since_last_frame: Duration,
     );
 }
 
@@ -35,12 +39,11 @@ impl Stage for NewGameStage {
 
     fn render(
         &mut self,
-        canvas: &mut WindowCanvas,
+        _: &mut WindowCanvas,
         _: &mut TextureCreator<WindowContext>,
         _: &mut Font,
-        _: f64,
+        _: Duration,
     ) {
-        canvas.clear();
     }
 }
 
@@ -130,30 +133,88 @@ impl Stage for PlayerTurnStage {
     }
 
     fn update(mut self: Box<Self>) -> Box<dyn Stage> {
-        let mut should_end_turn = false;
         match self.action {
             PlayerAction::None => {}
             PlayerAction::Pass => {
-                should_end_turn = true;
+                return Box::new(AITurnStage { game: self.game });
             }
-            PlayerAction::Interact => {}
+            PlayerAction::Interact => {
+                let player = *self
+                    .game
+                    .world
+                    .get_component::<PlayerComponent>(self.game.player_entity)
+                    .unwrap();
+                let player_position = *self
+                    .game
+                    .world
+                    .get_component::<PositionComponent>(self.game.player_entity)
+                    .unwrap();
+                let offset = match player.facing_direction {
+                    Direction::Up => PositionComponent { x: 0, y: 1 },
+                    Direction::Down => PositionComponent { x: 0, y: -1 },
+                    Direction::Left => PositionComponent { x: -1, y: 0 },
+                    Direction::Right => PositionComponent { x: 1, y: 0 },
+                    Direction::UpLeft => PositionComponent { x: -1, y: 1 },
+                    Direction::UpRight => PositionComponent { x: 1, y: 1 },
+                    Direction::DownLeft => PositionComponent { x: -1, y: -1 },
+                    Direction::DownRight => PositionComponent { x: 1, y: -1 },
+                };
+                let interacting_with_position = PositionComponent {
+                    x: player_position.x + offset.x,
+                    y: player_position.y + offset.y,
+                };
+
+                // If player facing and next to a staircase
+                if Read::<PositionComponent>::query()
+                    .filter(filter_fns::component::<StaircaseComponent>())
+                    .iter_immutable(&self.game.world)
+                    .any(|position| *position == interacting_with_position)
+                {
+                    // Heal the player by 20% of their max health
+                    {
+                        let mut player_combat = self
+                            .game
+                            .world
+                            .get_component_mut::<CombatComponent>(self.game.player_entity)
+                            .unwrap();
+                        player_combat.current_health = player_combat
+                            .max_health
+                            .min((player_combat.max_health as f64 * 0.2).round() as u16);
+                    }
+
+                    // Reset player position
+                    *self
+                        .game
+                        .world
+                        .get_component_mut::<PositionComponent>(self.game.player_entity)
+                        .unwrap() = PositionComponent { x: 0, y: 0 };
+
+                    // Delete all entities besides the player
+                    // TODO
+
+                    // Generate a new floor
+                    generate_dungeon(&mut self.game);
+
+                    return Box::new(PlayerTurnStage {
+                        game: self.game,
+                        action: PlayerAction::None,
+                        last_input_time: Instant::now(),
+                    });
+                }
+            }
             PlayerAction::Turn(direction) => {
-                turn(direction, &mut self.game);
-                should_end_turn = true;
+                turn_player_towards(direction, &mut self.game);
             }
             PlayerAction::Move(direction) => {
-                let move_result = try_move(self.game.player_entity, direction, &mut self.game);
-                should_end_turn = move_result.is_ok();
+                if try_move(self.game.player_entity, direction, &mut self.game).is_ok() {
+                    return Box::new(AITurnStage { game: self.game });
+                }
             }
             PlayerAction::UseItem(item_slot) => {}
         }
 
         self.action = PlayerAction::None;
-        if should_end_turn {
-            Box::new(AITurnStage { game: self.game })
-        } else {
-            self
-        }
+        self
     }
 
     fn render(
@@ -161,9 +222,10 @@ impl Stage for PlayerTurnStage {
         canvas: &mut WindowCanvas,
         texture_creator: &mut TextureCreator<WindowContext>,
         font: &mut Font,
-        delta_time: f64,
+        time_since_last_frame: Duration,
     ) {
-        self.game.render(canvas, texture_creator, font, delta_time);
+        self.game
+            .render(canvas, texture_creator, font, time_since_last_frame);
     }
 }
 
@@ -205,8 +267,9 @@ impl Stage for AITurnStage {
         canvas: &mut WindowCanvas,
         texture_creator: &mut TextureCreator<WindowContext>,
         font: &mut Font,
-        delta_time: f64,
+        time_since_last_frame: Duration,
     ) {
-        self.game.render(canvas, texture_creator, font, delta_time);
+        self.game
+            .render(canvas, texture_creator, font, time_since_last_frame);
     }
 }
