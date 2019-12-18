@@ -10,11 +10,6 @@ pub fn create_walls<'w, T: Iterator<Item = PositionComponent>>(
     world: &'w mut World,
     rng: &mut Pcg64,
 ) -> &'w [Entity] {
-    let sprite_id = if rng.gen_ratio(1, 4) {
-        "wall_mossy"
-    } else {
-        "wall"
-    };
     world.insert(
         (),
         positions.map(|position| {
@@ -25,7 +20,13 @@ pub fn create_walls<'w, T: Iterator<Item = PositionComponent>>(
                     is_concealed: false,
                 },
                 position,
-                SpriteComponent { id: sprite_id },
+                SpriteComponent {
+                    id: if rng.gen_ratio(1, 4) {
+                        "wall_mossy"
+                    } else {
+                        "wall"
+                    },
+                },
             )
         }),
     )
