@@ -21,7 +21,7 @@ pub struct SpriteComponent {
 }
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub struct CombatComponent {
+pub struct StatsComponent {
     pub current_health: u16,
     pub max_health: u16,
     pub strength: u16,

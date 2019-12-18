@@ -56,7 +56,7 @@ impl Game {
                     inventory: [None; 16],
                     turns_before_passive_healing: 10,
                 },
-                CombatComponent {
+                StatsComponent {
                     current_health: max_health,
                     max_health,
                     strength: rng.gen_range(1, 13),

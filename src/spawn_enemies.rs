@@ -6,6 +6,7 @@ use rand::Rng;
 
 pub fn spawn_enemies(game: &mut Game) {
     for i in 1..game.dungeon_generation_rng.gen_range(7, 10) {
+        // Choose random room and position
         if let Some(enemy_room) = game.rooms.get(i) {
             for _ in 0..30 {
                 let enemy_position = PositionComponent {
@@ -19,6 +20,7 @@ pub fn spawn_enemies(game: &mut Game) {
                     ),
                 };
 
+                // Try to place an enemy there unless the space is not empty
                 if !Read::<PositionComponent>::query()
                     .iter_immutable(&game.world)
                     .any(|position| enemy_position == *position)

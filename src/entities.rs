@@ -62,6 +62,7 @@ pub fn create_random_enemy(
         create_arcane_ooze,
         create_soul_spectre,
         create_mimic,
+        create_pyro_snake,
     ]
     .choose(rng)
     .unwrap();
@@ -192,6 +193,21 @@ pub fn create_mimic(position: PositionComponent, world: &mut World) -> Entity {
             SpriteComponent {
                 id: "mimic_disguised",
             },
+        )),
+    )[0]
+}
+
+pub fn create_pyro_snake(position: PositionComponent, world: &mut World) -> Entity {
+    world.insert(
+        (),
+        Some((
+            NameComponent {
+                name: "Pyro Snake",
+                concealed_name: "???",
+                is_concealed: false,
+            },
+            position,
+            SpriteComponent { id: "pyro_snake" },
         )),
     )[0]
 }

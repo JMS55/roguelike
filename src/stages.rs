@@ -172,14 +172,14 @@ impl Stage for PlayerTurnStage {
                 {
                     // Heal the player by 20% of their max health
                     {
-                        let mut player_combat = self
+                        let mut player_stats = self
                             .game
                             .world
-                            .get_component_mut::<CombatComponent>(self.game.player_entity)
+                            .get_component_mut::<StatsComponent>(self.game.player_entity)
                             .unwrap();
-                        player_combat.current_health = player_combat
+                        player_stats.current_health = player_stats
                             .max_health
-                            .min((player_combat.max_health as f64 * 0.2).round() as u16);
+                            .min((player_stats.max_health as f64 * 0.2).round() as u16);
                     }
 
                     // Reset player position
