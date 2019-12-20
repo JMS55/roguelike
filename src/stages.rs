@@ -175,9 +175,10 @@ impl Stage for PlayerTurnStage {
                             .world
                             .get_component_mut::<StatsComponent>(self.game.player_entity)
                             .unwrap();
+                        let heal_amount = (player_stats.max_health as f64 * 0.2).round() as u16;
                         player_stats.current_health = player_stats
                             .max_health
-                            .min((player_stats.max_health as f64 * 0.2).round() as u16);
+                            .min(player_stats.current_health + heal_amount);
                     }
 
                     // Reset player position

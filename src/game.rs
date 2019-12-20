@@ -125,7 +125,7 @@ impl Game {
                 if (player_stats.current_health as f64 / player_stats.max_health as f64) < 0.3 {
                     (1.7, 0.2, 0.4)
                 } else {
-                    (1.0, 1.0, 1.0)
+                    (1.0, 1.0, 2.0)
                 };
 
             // Create pixel data
@@ -135,8 +135,8 @@ impl Game {
             for y in 0..480 {
                 for x in 0..480 {
                     let mut n = self.noise_generator.get([
-                        x as f64 / 192.0,
-                        y as f64 / 192.0,
+                        x as f64 / 96.0,
+                        y as f64 / 96.0,
                         time_since_game_started,
                     ]);
                     // If tile is neighboring player then draw the background slightly lighter
