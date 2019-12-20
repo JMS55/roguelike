@@ -80,6 +80,7 @@ pub fn create_phase_bat(position: PositionComponent, world: &mut World) -> Entit
             },
             position,
             SpriteComponent { id: "phase_bat" },
+            TeamComponent::AI,
         )),
     )[0]
 }
@@ -97,6 +98,7 @@ pub fn create_danger_spider(position: PositionComponent, world: &mut World) -> E
             SpriteComponent {
                 id: "danger_spider",
             },
+            TeamComponent::AI,
         )),
     )[0]
 }
@@ -112,6 +114,7 @@ pub fn create_pungent_ooze(position: PositionComponent, world: &mut World) -> En
             },
             position,
             SpriteComponent { id: "pungent_ooze" },
+            TeamComponent::AI,
         )),
     )[0]
 }
@@ -129,6 +132,7 @@ pub fn create_skeleton_scout(position: PositionComponent, world: &mut World) -> 
             SpriteComponent {
                 id: "skeleton_scout",
             },
+            TeamComponent::AI,
         )),
     )[0]
 }
@@ -146,6 +150,7 @@ pub fn create_volatile_husk(position: PositionComponent, world: &mut World) -> E
             SpriteComponent {
                 id: "volatile_husk",
             },
+            TeamComponent::AI,
         )),
     )[0]
 }
@@ -161,6 +166,7 @@ pub fn create_arcane_ooze(position: PositionComponent, world: &mut World) -> Ent
             },
             position,
             SpriteComponent { id: "arcane_ooze" },
+            TeamComponent::AI,
         )),
     )[0]
 }
@@ -176,6 +182,7 @@ pub fn create_soul_spectre(position: PositionComponent, world: &mut World) -> En
             },
             position,
             SpriteComponent { id: "soul_spectre" },
+            TeamComponent::AI,
         )),
     )[0]
 }
@@ -193,6 +200,7 @@ pub fn create_mimic(position: PositionComponent, world: &mut World) -> Entity {
             SpriteComponent {
                 id: "mimic_disguised",
             },
+            TeamComponent::AI,
         )),
     )[0]
 }
@@ -208,6 +216,7 @@ pub fn create_pyro_snake(position: PositionComponent, world: &mut World) -> Enti
             },
             position,
             SpriteComponent { id: "pyro_snake" },
+            TeamComponent::AI,
         )),
     )[0]
 }
@@ -225,6 +234,7 @@ pub fn create_discordant_soul(position: PositionComponent, world: &mut World) ->
             SpriteComponent {
                 id: "discordant_soul",
             },
+            TeamComponent::AI,
         )),
     )[0]
 }

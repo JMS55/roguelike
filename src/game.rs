@@ -135,11 +135,17 @@ impl Game {
             for y in 0..480 {
                 for x in 0..480 {
                     let mut n = self.noise_generator.get([
-                        x as f64 / 256.0,
-                        y as f64 / 256.0,
+                        x as f64 / 192.0,
+                        y as f64 / 192.0,
                         time_since_game_started,
                     ]);
-                    n = (n + 1.0) * 32.0;
+                    // If tile is neighboring player then draw the background slightly lighter
+                    let m = if x >= 192 && x <= 288 && y >= 192 && y <= 288 {
+                        48.0
+                    } else {
+                        16.0
+                    };
+                    n = (n + 1.0) * m;
                     pixel_data[i] = (n * red_modifier).round() as u8;
                     pixel_data[i + 1] = (n * green_modifier).round() as u8;
                     pixel_data[i + 2] = (n * blue_modifier).round() as u8;

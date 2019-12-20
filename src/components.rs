@@ -31,6 +31,12 @@ pub struct StatsComponent {
 }
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum TeamComponent {
+    Ally,
+    AI,
+}
+
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct PlayerComponent {
     pub facing_direction: Direction,
     pub inventory: [Option<Entity>; 16],
@@ -39,12 +45,6 @@ pub struct PlayerComponent {
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct StaircaseComponent {}
-
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub enum TeamComponent {
-    Ally,
-    AI,
-}
 
 pub struct AIComponent {
     pub ai: Box<dyn AI>,
