@@ -20,7 +20,6 @@ pub trait Stage {
         canvas: &mut WindowCanvas,
         texture_creator: &mut TextureCreator<WindowContext>,
         font: &mut Font,
-        time_since_last_frame: Duration,
     );
 }
 
@@ -42,7 +41,6 @@ impl Stage for NewGameStage {
         _: &mut WindowCanvas,
         _: &mut TextureCreator<WindowContext>,
         _: &mut Font,
-        _: Duration,
     ) {
     }
 }
@@ -222,10 +220,8 @@ impl Stage for PlayerTurnStage {
         canvas: &mut WindowCanvas,
         texture_creator: &mut TextureCreator<WindowContext>,
         font: &mut Font,
-        time_since_last_frame: Duration,
     ) {
-        self.game
-            .render(canvas, texture_creator, font, time_since_last_frame);
+        self.game.render(canvas, texture_creator, font);
     }
 }
 
@@ -267,9 +263,7 @@ impl Stage for AITurnStage {
         canvas: &mut WindowCanvas,
         texture_creator: &mut TextureCreator<WindowContext>,
         font: &mut Font,
-        time_since_last_frame: Duration,
     ) {
-        self.game
-            .render(canvas, texture_creator, font, time_since_last_frame);
+        self.game.render(canvas, texture_creator, font);
     }
 }

@@ -5,9 +5,11 @@ use crate::spawn_enemies::spawn_enemies;
 use legion::entity::Entity;
 use legion::query::{IntoQuery, Read};
 use legion::world::World;
+use noise::{NoiseFn, OpenSimplex};
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
 use sdl2::image::LoadTexture;
+use sdl2::pixels::PixelFormatEnum;
 use sdl2::rect::Rect;
 use sdl2::render::{TextureCreator, WindowCanvas};
 use sdl2::ttf::Font;
@@ -26,6 +28,9 @@ pub struct Game {
     pub dungeon_generation_rng: Pcg64,
 
     pub message_log: Vec<Message>,
+
+    noise_generator: OpenSimplex,
+    time_game_started: Instant,
 }
 
 impl Game {
@@ -39,6 +44,9 @@ impl Game {
         let dungeon_generation_rng = Pcg64::from_entropy();
 
         let message_log = Vec::with_capacity(100);
+
+        let noise_generator = OpenSimplex::new();
+        let time_game_started = Instant::now();
 
         let max_health = rng.gen_range(12, 31);
         let player_entity = world.insert(
@@ -79,6 +87,9 @@ impl Game {
             dungeon_generation_rng,
 
             message_log,
+
+            noise_generator,
+            time_game_started,
         };
 
         generate_dungeon(&mut game);
@@ -92,7 +103,6 @@ impl Game {
         canvas: &mut WindowCanvas,
         texture_creator: &mut TextureCreator<WindowContext>,
         font: &mut Font,
-        time_since_last_frame: Duration,
     ) {
         let player = *self
             .world
@@ -102,6 +112,48 @@ impl Game {
             .world
             .get_component::<PositionComponent>(self.player_entity)
             .unwrap();
+        let player_stats = *self
+            .world
+            .get_component::<StatsComponent>(self.player_entity)
+            .unwrap();
+
+        // Render background
+        {
+            // Determine color modifier
+            // TODO: Add a transition
+            let (red_modifier, green_modifier, blue_modifier) =
+                if (player_stats.current_health as f64 / player_stats.max_health as f64) < 0.3 {
+                    (1.7, 0.2, 0.4)
+                } else {
+                    (1.0, 1.0, 1.0)
+                };
+
+            // Create pixel data
+            let mut pixel_data: [u8; 480 * 480 * 3] = [0; 480 * 480 * 3];
+            let time_since_game_started = self.time_game_started.elapsed().as_secs_f64();
+            let mut i = 0;
+            for y in 0..480 {
+                for x in 0..480 {
+                    let mut n = self.noise_generator.get([
+                        x as f64 / 256.0,
+                        y as f64 / 256.0,
+                        time_since_game_started,
+                    ]);
+                    n = (n + 1.0) * 32.0;
+                    pixel_data[i] = (n * red_modifier).round() as u8;
+                    pixel_data[i + 1] = (n * green_modifier).round() as u8;
+                    pixel_data[i + 2] = (n * blue_modifier).round() as u8;
+                    i += 3;
+                }
+            }
+
+            // Copy pixel data to canvas
+            let mut texture = texture_creator
+                .create_texture_static(PixelFormatEnum::RGB24, 480, 480)
+                .unwrap();
+            texture.update(None, &pixel_data, 480 * 3).unwrap();
+            canvas.copy(&texture, None, None).unwrap();
+        }
 
         // Render floor tiles
         {
