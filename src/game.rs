@@ -125,7 +125,7 @@ impl Game {
                 if (player_stats.current_health as f64 / player_stats.max_health as f64) < 0.3 {
                     (1.7, 0.2, 0.4)
                 } else {
-                    (1.0, 1.0, 2.0)
+                    (1.0, 1.0, 1.8)
                 };
 
             // Create pixel data
@@ -141,7 +141,7 @@ impl Game {
                     ]);
                     // If tile is neighboring player then draw the background slightly lighter
                     let m = if x >= 192 && x <= 288 && y >= 192 && y <= 288 {
-                        48.0
+                        40.0
                     } else {
                         16.0
                     };

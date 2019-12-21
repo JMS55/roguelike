@@ -1,4 +1,4 @@
-use crate::game::Game;
+use crate::ai::AI;
 use crate::movement::Direction;
 use legion::entity::Entity;
 
@@ -48,27 +48,4 @@ pub struct StaircaseComponent {}
 
 pub struct AIComponent {
     pub ai: Box<dyn AI>,
-}
-
-pub trait AI {
-    fn run(&mut self, game: &mut Game, this_entity: Entity);
-}
-
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub struct StationaryAI {
-    pub target: Option<Entity>,
-}
-
-impl AI for StationaryAI {
-    fn run(&mut self, game: &mut Game, this_entity: Entity) {}
-}
-
-#[derive(Hash, Debug, Clone, PartialEq, Eq)]
-pub struct PatrollingAI {
-    pub target: Option<Entity>,
-    pub path: Vec<PositionComponent>,
-}
-
-impl AI for PatrollingAI {
-    fn run(&mut self, game: &mut Game, this_entity: Entity) {}
 }

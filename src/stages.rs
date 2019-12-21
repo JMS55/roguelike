@@ -1,7 +1,10 @@
+use crate::combat::heal;
 use crate::components::*;
 use crate::game::Game;
 use crate::generate_dungeon::generate_dungeon;
 use crate::movement::{try_move, turn_player_towards, Direction};
+use crate::spawn_enemies::spawn_enemies;
+use legion::entity::Entity;
 use legion::filter::filter_fns;
 use legion::query::{IntoQuery, Read};
 use sdl2::keyboard::{KeyboardState, Scancode};
@@ -169,19 +172,19 @@ impl Stage for PlayerTurnStage {
                     .any(|position| *position == interacting_with_position)
                 {
                     // Heal the player by 20% of their max health
-                    {
-                        let mut player_stats = self
-                            .game
-                            .world
-                            .get_component_mut::<StatsComponent>(self.game.player_entity)
-                            .unwrap();
-                        let heal_amount = (player_stats.max_health as f64 * 0.2).round() as u16;
-                        player_stats.current_health = player_stats
-                            .max_health
-                            .min(player_stats.current_health + heal_amount);
-                    }
+                    let player_max_health = self
+                        .game
+                        .world
+                        .get_component::<StatsComponent>(self.game.player_entity)
+                        .unwrap()
+                        .max_health;
+                    heal(
+                        self.game.player_entity,
+                        (player_max_health as f64 * 0.2).round() as u16,
+                        &mut self.game,
+                    );
 
-                    // Reset player position
+                    // Reset the player's position
                     *self
                         .game
                         .world
@@ -193,6 +196,7 @@ impl Stage for PlayerTurnStage {
 
                     // Generate a new floor
                     generate_dungeon(&mut self.game);
+                    spawn_enemies(&mut self.game);
 
                     return Box::new(PlayerTurnStage {
                         game: self.game,
@@ -251,7 +255,34 @@ pub struct AITurnStage {
 impl Stage for AITurnStage {
     fn input(&mut self, _: &KeyboardState) {}
 
-    fn update(self: Box<Self>) -> Box<dyn Stage> {
+    fn update(mut self: Box<Self>) -> Box<dyn Stage> {
+        // TODO: Use an empty query with a filter_fns::component instead
+        let entities_to_run = Read::<AIComponent>::query()
+            .iter_entities_immutable(&self.game.world)
+            .map(|(entity, _)| entity)
+            .collect::<Vec<Entity>>();
+        for entity in entities_to_run {
+            // Duplicate the AI in case the entity dies during run()
+            let ai = self
+                .game
+                .world
+                .get_component_mut::<AIComponent>(entity)
+                .map(|ai_component| ai_component.ai.clone());
+            if let Some(mut ai) = ai {
+                // Run the enitiy's AI. This mutates the copy we made.
+                ai.run(&mut self.game, entity);
+                // Overwrite the old AI with the copy we made if it still has an AI
+                if self
+                    .game
+                    .world
+                    .get_component::<AIComponent>(entity)
+                    .is_some()
+                {
+                    self.game.world.add_component(entity, AIComponent { ai });
+                }
+            }
+        }
+
         Box::new(PlayerTurnStage {
             game: self.game,
             action: PlayerAction::None,
