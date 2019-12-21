@@ -54,6 +54,27 @@ pub struct PlayerTurnStage {
     last_input_time: Instant,
 }
 
+impl PlayerTurnStage {
+    fn end_of_turn(&mut self) {
+        let mut should_heal_player = false;
+        {
+            let mut player = self
+                .game
+                .world
+                .get_component_mut::<PlayerComponent>(self.game.player_entity)
+                .unwrap();
+            player.turns_before_passive_healing -= 1;
+            if player.turns_before_passive_healing == 0 {
+                player.turns_before_passive_healing = 10;
+                should_heal_player = true;
+            }
+        }
+        if should_heal_player {
+            heal(self.game.player_entity, 2, &mut self.game);
+        }
+    }
+}
+
 impl Stage for PlayerTurnStage {
     fn input(&mut self, keyboard: &KeyboardState) {
         if self.last_input_time.elapsed() >= Duration::from_millis(150) {
@@ -137,6 +158,7 @@ impl Stage for PlayerTurnStage {
         match self.action {
             PlayerAction::None => {}
             PlayerAction::Pass => {
+                self.end_of_turn();
                 return Box::new(AITurnStage { game: self.game });
             }
             PlayerAction::Interact => {
@@ -198,6 +220,7 @@ impl Stage for PlayerTurnStage {
                     generate_dungeon(&mut self.game);
                     spawn_enemies(&mut self.game);
 
+                    self.end_of_turn();
                     return Box::new(PlayerTurnStage {
                         game: self.game,
                         action: PlayerAction::None,
@@ -210,6 +233,7 @@ impl Stage for PlayerTurnStage {
             }
             PlayerAction::Move(direction) => {
                 if try_move(self.game.player_entity, direction, &mut self.game).is_ok() {
+                    self.end_of_turn();
                     return Box::new(AITurnStage { game: self.game });
                 }
             }
