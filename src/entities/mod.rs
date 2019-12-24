@@ -9,15 +9,16 @@ mod soul_spectre;
 mod volatile_husk;
 
 use crate::components::*;
+use crate::game::RNG;
+use crate::movement::Direction;
 use hecs::{Entity, World};
 use rand::seq::SliceRandom;
 use rand::Rng;
-use rand_pcg::Pcg64;
 
 pub fn create_random_enemy(
     position: PositionComponent,
     world: &mut World,
-    rng: &mut Pcg64,
+    rng: &mut RNG,
 ) -> Entity {
     let create_function = [
         arcane_ooze::create_arcane_ooze,
@@ -35,6 +36,33 @@ pub fn create_random_enemy(
     (create_function)(position, world)
 }
 
+pub fn create_player(world: &mut World, rng: &mut RNG) -> Entity {
+    let max_health = rng.gen_range(12, 31);
+    world.spawn((
+        NameComponent {
+            name: "Player",
+            concealed_name: "???",
+            is_concealed: false,
+        },
+        PositionComponent { x: 0, y: 0 },
+        SpriteComponent { id: "player" },
+        PlayerComponent {
+            facing_direction: Direction::Up,
+            inventory: [None; 16],
+            turns_before_passive_healing: 10,
+        },
+        StatsComponent {
+            current_health: max_health,
+            max_health,
+            strength: rng.gen_range(1, 13),
+            luck: rng.gen_range(1, 13),
+            agility: rng.gen_range(1, 13),
+            focus: rng.gen_range(1, 13),
+        },
+        TeamComponent::Ally,
+    ))
+}
+
 pub fn create_staircase(position: PositionComponent, world: &mut World) -> Entity {
     world.spawn((
         NameComponent {
@@ -48,7 +76,7 @@ pub fn create_staircase(position: PositionComponent, world: &mut World) -> Entit
     ))
 }
 
-pub fn create_wall(position: PositionComponent, world: &mut World, rng: &mut Pcg64) -> Entity {
+pub fn create_wall(position: PositionComponent, world: &mut World, rng: &mut RNG) -> Entity {
     world.spawn((
         NameComponent {
             name: "Wall",

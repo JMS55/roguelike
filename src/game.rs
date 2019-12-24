@@ -1,10 +1,11 @@
 use crate::components::*;
+use crate::entities;
 use crate::generate_dungeon::{generate_dungeon, Room};
 use crate::movement::Direction;
 use crate::spawn_enemies::spawn_enemies;
 use hecs::{Entity, World};
 use noise::{NoiseFn, OpenSimplex};
-use rand::{Rng, SeedableRng};
+use rand::SeedableRng;
 use rand_pcg::Pcg64;
 use sdl2::image::LoadTexture;
 use sdl2::pixels::PixelFormatEnum;
@@ -22,8 +23,8 @@ pub struct Game {
     pub floor_positions: HashSet<PositionComponent>,
     pub floor_number: u32,
 
-    pub rng: Pcg64,
-    pub dungeon_generation_rng: Pcg64,
+    pub rng: RNG,
+    pub dungeon_generation_rng: RNG,
 
     pub message_log: Vec<Message>,
 
@@ -34,57 +35,23 @@ pub struct Game {
 impl Game {
     pub fn new() -> Self {
         let mut world = World::new();
-        let rooms = Vec::new();
-        let floor_positions = HashSet::new();
-        let floor_number = 0;
-
-        let mut rng = Pcg64::from_entropy();
-        let dungeon_generation_rng = Pcg64::from_entropy();
-
-        let message_log = Vec::with_capacity(100);
-
-        let noise_generator = OpenSimplex::new();
-        let time_game_started = Instant::now();
-
-        let max_health = rng.gen_range(12, 31);
-        let player_entity = world.spawn((
-            NameComponent {
-                name: "Player",
-                concealed_name: "???",
-                is_concealed: false,
-            },
-            PositionComponent { x: 0, y: 0 },
-            SpriteComponent { id: "player" },
-            PlayerComponent {
-                facing_direction: Direction::Up,
-                inventory: [None; 16],
-                turns_before_passive_healing: 10,
-            },
-            StatsComponent {
-                current_health: max_health,
-                max_health,
-                strength: rng.gen_range(1, 13),
-                luck: rng.gen_range(1, 13),
-                agility: rng.gen_range(1, 13),
-                focus: rng.gen_range(1, 13),
-            },
-            TeamComponent::Ally,
-        ));
+        let mut rng = RNG::from_entropy();
+        let player_entity = entities::create_player(&mut world, &mut rng);
 
         let mut game = Self {
             world,
             player_entity,
-            rooms,
-            floor_positions,
-            floor_number,
+            rooms: Vec::new(),
+            floor_positions: HashSet::new(),
+            floor_number: 0,
 
             rng,
-            dungeon_generation_rng,
+            dungeon_generation_rng: RNG::from_entropy(),
 
-            message_log,
+            message_log: Vec::with_capacity(100),
 
-            noise_generator,
-            time_game_started,
+            noise_generator: OpenSimplex::new(),
+            time_game_started: Instant::now(),
         };
 
         generate_dungeon(&mut game);
@@ -259,3 +226,5 @@ impl Message {
 pub enum MessageColor {
     White,
 }
+
+pub type RNG = Pcg64;
