@@ -295,7 +295,7 @@ impl Stage for AITurnStage {
     fn input(&mut self, _: &KeyboardState) {}
 
     fn update(mut self: Box<Self>) -> Box<dyn Stage> {
-        let ai_entities_to_run = self
+        let mut ai_entities_to_run = self
             .game
             .world
             .query::<()>()
@@ -303,6 +303,20 @@ impl Stage for AITurnStage {
             .iter()
             .map(|(entity, _)| entity)
             .collect::<Vec<Entity>>();
+        // Sort AI entities by distance to the player
+        let player_position = *self
+            .game
+            .world
+            .get::<PositionComponent>(self.game.player_entity)
+            .unwrap();
+        ai_entities_to_run.sort_by_key(|ai_entity| {
+            if let Ok(ai_entity_position) = self.game.world.get::<PositionComponent>(*ai_entity) {
+                (ai_entity_position.x - player_position.x).abs() as u16
+                    + (ai_entity_position.y - player_position.y).abs() as u16
+            } else {
+                0
+            }
+        });
         for ai_entity in ai_entities_to_run {
             // Duplicate the AI in case the entity dies during run()
             let ai = self
