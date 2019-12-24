@@ -1,6 +1,6 @@
-use crate::ai::AI;
+use crate::game::Game;
 use crate::movement::Direction;
-use legion::entity::Entity;
+use hecs::Entity;
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct NameComponent {
@@ -48,4 +48,9 @@ pub struct StaircaseComponent {}
 
 pub struct AIComponent {
     pub ai: Box<dyn AI>,
+}
+
+pub trait AI: Send + Sync + 'static {
+    fn run(&mut self, this_entity: Entity, game: &mut Game);
+    fn clone(&self) -> Box<dyn AI>;
 }

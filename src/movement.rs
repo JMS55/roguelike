@@ -1,8 +1,6 @@
 use crate::components::*;
 use crate::game::Game;
-use legion::entity::Entity;
-use legion::filter::filter_fns;
-use legion::query::{IntoQuery, Read};
+use hecs::Entity;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
@@ -11,10 +9,7 @@ pub fn try_move_towards(
     goal: PositionComponent,
     game: &mut Game,
 ) -> Result<(), ()> {
-    let moving_entity_position = *game
-        .world
-        .get_component::<PositionComponent>(moving_entity)
-        .unwrap();
+    let moving_entity_position = *game.world.get::<PositionComponent>(moving_entity).unwrap();
     let path = pathfind(moving_entity_position, goal, game);
     if let Some(new_position) = path.get(0) {
         let direction = match (
@@ -54,10 +49,7 @@ pub fn try_move(entity: Entity, direction: Direction, game: &mut Game) -> Result
             Direction::DownLeft => PositionComponent { x: -1, y: -1 },
             Direction::DownRight => PositionComponent { x: 1, y: -1 },
         };
-        let mut entity_position = game
-            .world
-            .get_component_mut::<PositionComponent>(entity)
-            .unwrap();
+        let mut entity_position = game.world.get_mut::<PositionComponent>(entity).unwrap();
         let new_entity_position = PositionComponent {
             x: entity_position.x + offset.x,
             y: entity_position.y + offset.y,
@@ -80,22 +72,20 @@ pub fn can_move(entity: Entity, direction: Direction, game: &Game) -> bool {
         Direction::DownLeft => PositionComponent { x: -1, y: -1 },
         Direction::DownRight => PositionComponent { x: 1, y: -1 },
     };
-    let entity_position = game
-        .world
-        .get_component::<PositionComponent>(entity)
-        .unwrap();
+    let entity_position = game.world.get::<PositionComponent>(entity).unwrap();
     let new_entity_position = PositionComponent {
         x: entity_position.x + offset.x,
         y: entity_position.y + offset.y,
     };
-    Read::<PositionComponent>::query()
-        .iter_immutable(&game.world)
-        .all(|position| *position != new_entity_position)
+    game.world
+        .query::<&PositionComponent>()
+        .iter()
+        .all(|(_, position)| *position != new_entity_position)
 }
 
 pub fn turn_player_towards(direction: Direction, game: &mut Game) {
     game.world
-        .get_component_mut::<PlayerComponent>(game.player_entity)
+        .get_mut::<PlayerComponent>(game.player_entity)
         .unwrap()
         .facing_direction = direction;
 }
@@ -112,15 +102,17 @@ pub enum Direction {
     DownRight,
 }
 
-fn pathfind(
+pub fn pathfind(
     start: PositionComponent,
     goal: PositionComponent,
     game: &Game,
 ) -> Vec<PositionComponent> {
-    let obstacles = Read::<PositionComponent>::query()
-        .filter(!filter_fns::component::<AIComponent>())
-        .iter_immutable(&game.world)
-        .map(|position| *position)
+    let obstacles = game
+        .world
+        .query::<&PositionComponent>()
+        .without::<AIComponent>()
+        .iter()
+        .map(|(_, position)| *position)
         .collect::<HashSet<PositionComponent>>();
     let mut frontier = BinaryHeap::new();
     let mut came_from = HashMap::new();

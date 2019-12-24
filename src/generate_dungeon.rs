@@ -131,11 +131,13 @@ pub fn generate_dungeon(game: &mut Game) {
     }
 
     // Create wall entities
-    entities::create_walls(
-        wall_positions.difference(&game.floor_positions).cloned(),
-        &mut game.world,
-        &mut game.dungeon_generation_rng,
-    );
+    for wall_position in wall_positions.difference(&game.floor_positions) {
+        entities::create_wall(
+            *wall_position,
+            &mut game.world,
+            &mut game.dungeon_generation_rng,
+        );
+    }
 
     // Create staircase entity
     let staircase_room = &game.rooms[1];

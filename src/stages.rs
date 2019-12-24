@@ -4,9 +4,7 @@ use crate::game::Game;
 use crate::generate_dungeon::generate_dungeon;
 use crate::movement::{try_move, turn_player_towards, Direction};
 use crate::spawn_enemies::spawn_enemies;
-use legion::entity::Entity;
-use legion::filter::filter_fns;
-use legion::query::{IntoQuery, Read};
+use hecs::Entity;
 use sdl2::keyboard::{KeyboardState, Scancode};
 use sdl2::render::{TextureCreator, WindowCanvas};
 use sdl2::ttf::Font;
@@ -61,7 +59,7 @@ impl PlayerTurnStage {
             let mut player = self
                 .game
                 .world
-                .get_component_mut::<PlayerComponent>(self.game.player_entity)
+                .get_mut::<PlayerComponent>(self.game.player_entity)
                 .unwrap();
             player.turns_before_passive_healing -= 1;
             if player.turns_before_passive_healing == 0 {
@@ -165,12 +163,12 @@ impl Stage for PlayerTurnStage {
                 let player = *self
                     .game
                     .world
-                    .get_component::<PlayerComponent>(self.game.player_entity)
+                    .get::<PlayerComponent>(self.game.player_entity)
                     .unwrap();
                 let player_position = *self
                     .game
                     .world
-                    .get_component::<PositionComponent>(self.game.player_entity)
+                    .get::<PositionComponent>(self.game.player_entity)
                     .unwrap();
                 let offset = match player.facing_direction {
                     Direction::Up => PositionComponent { x: 0, y: 1 },
@@ -188,16 +186,19 @@ impl Stage for PlayerTurnStage {
                 };
 
                 // If player facing and next to a staircase
-                if Read::<PositionComponent>::query()
-                    .filter(filter_fns::component::<StaircaseComponent>())
-                    .iter_immutable(&self.game.world)
-                    .any(|position| *position == interacting_with_position)
+                if self
+                    .game
+                    .world
+                    .query::<&PositionComponent>()
+                    .with::<StaircaseComponent>()
+                    .iter()
+                    .any(|(_, position)| *position == interacting_with_position)
                 {
                     // Heal the player by 20% of their max health
                     let player_max_health = self
                         .game
                         .world
-                        .get_component::<StatsComponent>(self.game.player_entity)
+                        .get::<StatsComponent>(self.game.player_entity)
                         .unwrap()
                         .max_health;
                     heal(
@@ -210,11 +211,25 @@ impl Stage for PlayerTurnStage {
                     *self
                         .game
                         .world
-                        .get_component_mut::<PositionComponent>(self.game.player_entity)
+                        .get_mut::<PositionComponent>(self.game.player_entity)
                         .unwrap() = PositionComponent { x: 0, y: 0 };
 
                     // Delete all entities besides the player
-                    // TODO
+                    let entities_to_delete = self
+                        .game
+                        .world
+                        .iter()
+                        .filter_map(|(entity, _)| {
+                            if entity != self.game.player_entity {
+                                Some(entity)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<Entity>>();
+                    for entity in entities_to_delete {
+                        self.game.world.despawn(entity).unwrap();
+                    }
 
                     // Generate a new floor
                     generate_dungeon(&mut self.game);
@@ -280,29 +295,30 @@ impl Stage for AITurnStage {
     fn input(&mut self, _: &KeyboardState) {}
 
     fn update(mut self: Box<Self>) -> Box<dyn Stage> {
-        // TODO: Use an empty query with a filter_fns::component instead
-        let entities_to_run = Read::<AIComponent>::query()
-            .iter_entities_immutable(&self.game.world)
+        let ai_entities_to_run = self
+            .game
+            .world
+            .query::<()>()
+            .with::<AIComponent>()
+            .iter()
             .map(|(entity, _)| entity)
             .collect::<Vec<Entity>>();
-        for entity in entities_to_run {
+        for ai_entity in ai_entities_to_run {
             // Duplicate the AI in case the entity dies during run()
             let ai = self
                 .game
                 .world
-                .get_component_mut::<AIComponent>(entity)
+                .get_mut::<AIComponent>(ai_entity)
                 .map(|ai_component| ai_component.ai.clone());
-            if let Some(mut ai) = ai {
+            if let Ok(mut ai) = ai {
                 // Run the enitiy's AI. This mutates the copy we made.
-                ai.run(&mut self.game, entity);
-                // Overwrite the old AI with the copy we made if it still has an AI
-                if self
-                    .game
-                    .world
-                    .get_component::<AIComponent>(entity)
-                    .is_some()
-                {
-                    self.game.world.add_component(entity, AIComponent { ai });
+                ai.run(ai_entity, &mut self.game);
+                // Overwrite the old AI with the copy we made if it still exists and still has an AI
+                if self.game.world.get::<AIComponent>(ai_entity).is_ok() {
+                    self.game
+                        .world
+                        .insert_one(ai_entity, AIComponent { ai })
+                        .unwrap();
                 }
             }
         }

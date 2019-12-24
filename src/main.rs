@@ -1,6 +1,5 @@
 #![windows_subsystem = "windows"]
 
-mod ai;
 mod combat;
 mod components;
 mod entities;

@@ -1,7 +1,6 @@
 use crate::components::PositionComponent;
 use crate::entities;
 use crate::game::Game;
-use legion::query::{IntoQuery, Read};
 use rand::Rng;
 
 pub fn spawn_enemies(game: &mut Game) {
@@ -21,9 +20,11 @@ pub fn spawn_enemies(game: &mut Game) {
                 };
 
                 // Try to place an enemy there unless the space is not empty
-                if !Read::<PositionComponent>::query()
-                    .iter_immutable(&game.world)
-                    .any(|position| enemy_position == *position)
+                if !game
+                    .world
+                    .query::<&PositionComponent>()
+                    .iter()
+                    .any(|(_, position)| enemy_position == *position)
                 {
                     entities::create_random_enemy(
                         enemy_position,

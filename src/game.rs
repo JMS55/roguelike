@@ -2,9 +2,7 @@ use crate::components::*;
 use crate::generate_dungeon::{generate_dungeon, Room};
 use crate::movement::Direction;
 use crate::spawn_enemies::spawn_enemies;
-use legion::entity::Entity;
-use legion::query::{IntoQuery, Read};
-use legion::world::World;
+use hecs::{Entity, World};
 use noise::{NoiseFn, OpenSimplex};
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
@@ -49,32 +47,29 @@ impl Game {
         let time_game_started = Instant::now();
 
         let max_health = rng.gen_range(12, 31);
-        let player_entity = world.insert(
-            (),
-            Some((
-                NameComponent {
-                    name: "Player",
-                    concealed_name: "???",
-                    is_concealed: false,
-                },
-                PositionComponent { x: 0, y: 0 },
-                SpriteComponent { id: "player" },
-                PlayerComponent {
-                    facing_direction: Direction::Up,
-                    inventory: [None; 16],
-                    turns_before_passive_healing: 10,
-                },
-                StatsComponent {
-                    current_health: max_health,
-                    max_health,
-                    strength: rng.gen_range(1, 13),
-                    luck: rng.gen_range(1, 13),
-                    agility: rng.gen_range(1, 13),
-                    focus: rng.gen_range(1, 13),
-                },
-                TeamComponent::Ally,
-            )),
-        )[0];
+        let player_entity = world.spawn((
+            NameComponent {
+                name: "Player",
+                concealed_name: "???",
+                is_concealed: false,
+            },
+            PositionComponent { x: 0, y: 0 },
+            SpriteComponent { id: "player" },
+            PlayerComponent {
+                facing_direction: Direction::Up,
+                inventory: [None; 16],
+                turns_before_passive_healing: 10,
+            },
+            StatsComponent {
+                current_health: max_health,
+                max_health,
+                strength: rng.gen_range(1, 13),
+                luck: rng.gen_range(1, 13),
+                agility: rng.gen_range(1, 13),
+                focus: rng.gen_range(1, 13),
+            },
+            TeamComponent::Ally,
+        ));
 
         let mut game = Self {
             world,
@@ -106,21 +101,20 @@ impl Game {
     ) {
         let player = *self
             .world
-            .get_component::<PlayerComponent>(self.player_entity)
+            .get::<PlayerComponent>(self.player_entity)
             .unwrap();
         let player_position = *self
             .world
-            .get_component::<PositionComponent>(self.player_entity)
+            .get::<PositionComponent>(self.player_entity)
             .unwrap();
         let player_stats = *self
             .world
-            .get_component::<StatsComponent>(self.player_entity)
+            .get::<StatsComponent>(self.player_entity)
             .unwrap();
 
         // Render background
-        {
+        if !cfg!(debug_assertions) {
             // Determine color modifier
-            // TODO: Add a transition
             let (red_modifier, green_modifier, blue_modifier) =
                 if (player_stats.current_health as f64 / player_stats.max_health as f64) < 0.3 {
                     (1.7, 0.2, 0.4)
@@ -182,9 +176,11 @@ impl Game {
 
         // Render entities
         {
-            for (sprite, position) in <(Read<SpriteComponent>, Read<PositionComponent>)>::query()
-                .iter_immutable(&self.world)
-                .map(|(sprite, position)| {
+            for (sprite, position) in self
+                .world
+                .query::<(&SpriteComponent, &PositionComponent)>()
+                .iter()
+                .map(|(_, (sprite, position))| {
                     (
                         sprite,
                         PositionComponent {

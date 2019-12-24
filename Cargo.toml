@@ -5,7 +5,7 @@ edition = "2018"
 license = "AGPL-3.0-only"
 
 [dependencies]
-legion = "0.2"
+hecs = "0.2"
 rand = "0.7"
 rand_distr = "0.2"
 rand_pcg = "0.2"

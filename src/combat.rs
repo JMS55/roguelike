@@ -1,8 +1,7 @@
 use crate::components::*;
 use crate::game::Game;
-use legion::entity::Entity;
-use legion::filter::filter_fns;
-use legion::query::{IntoQuery, Read};
+use hecs::Entity;
+use rand::Rng;
 use std::collections::{HashMap, HashSet};
 
 pub fn attack(
@@ -11,14 +10,13 @@ pub fn attack(
     attack_offsets: &'static [PositionComponent],
     game: &mut Game,
 ) {
-    let attacker_position = *game
+    let attacker_position = *game.world.get::<PositionComponent>(attacker).unwrap();
+    let attacker_team = *game.world.get::<TeamComponent>(attacker).unwrap();
+    let target_positions = game
         .world
-        .get_component::<PositionComponent>(attacker)
-        .unwrap();
-    let attacker_team = *game.world.get_component::<TeamComponent>(attacker).unwrap();
-    let target_positions = <(Read<PositionComponent>, Read<TeamComponent>)>::query()
-        .filter(filter_fns::component::<StatsComponent>())
-        .iter_entities_immutable(&game.world)
+        .query::<(&PositionComponent, &TeamComponent)>()
+        .with::<StatsComponent>()
+        .iter()
         .filter_map(|(entity, (position, team))| {
             if *team != attacker_team {
                 Some((*position, entity))
@@ -51,15 +49,14 @@ pub fn can_attack(
     attack_offsets: &'static [PositionComponent],
     game: &Game,
 ) -> bool {
-    let attacker_position = *game
+    let attacker_position = *game.world.get::<PositionComponent>(attacker).unwrap();
+    let attacker_team = *game.world.get::<TeamComponent>(attacker).unwrap();
+    let target_positions = game
         .world
-        .get_component::<PositionComponent>(attacker)
-        .unwrap();
-    let attacker_team = *game.world.get_component::<TeamComponent>(attacker).unwrap();
-    let target_positions = <(Read<PositionComponent>, Read<TeamComponent>)>::query()
-        .filter(filter_fns::component::<StatsComponent>())
-        .iter_immutable(&game.world)
-        .filter_map(|(position, team)| {
+        .query::<(&PositionComponent, &TeamComponent)>()
+        .with::<StatsComponent>()
+        .iter()
+        .filter_map(|(_, (position, team))| {
             if *team != attacker_team {
                 Some(*position)
             } else {
@@ -85,24 +82,24 @@ pub fn can_attack(
 // Returns whether the target died
 pub fn damage(target: Entity, damage_amount: u16, game: &mut Game) -> bool {
     let did_target_die = {
-        let mut target_stats = game
-            .world
-            .get_component_mut::<StatsComponent>(target)
-            .unwrap();
+        let mut target_stats = game.world.get_mut::<StatsComponent>(target).unwrap();
+
+        let attack_missed = game.rng.gen_bool(target_stats.agility as f64 / 100.0);
+        if attack_missed {
+            return false;
+        }
+
         target_stats.current_health = target_stats.current_health.saturating_sub(damage_amount);
         target_stats.current_health == 0
     };
-    if did_target_die {
-        game.world.delete(target);
+    if did_target_die && target != game.player_entity {
+        game.world.despawn(target).unwrap();
     }
     did_target_die
 }
 
 pub fn heal(target: Entity, heal_amount: u16, game: &mut Game) {
-    let mut target_stats = game
-        .world
-        .get_component_mut::<StatsComponent>(target)
-        .unwrap();
+    let mut target_stats = game.world.get_mut::<StatsComponent>(target).unwrap();
     target_stats.current_health = target_stats
         .max_health
         .min(target_stats.current_health + heal_amount);
