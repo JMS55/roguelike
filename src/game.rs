@@ -1,7 +1,6 @@
 use crate::components::*;
 use crate::entities;
 use crate::generate_dungeon::{generate_dungeon, Room};
-use crate::movement::Direction;
 use crate::spawn_enemies::spawn_enemies;
 use hecs::{Entity, World};
 use noise::{NoiseFn, OpenSimplex};
@@ -170,26 +169,23 @@ impl Game {
 
         // Render player facing_direction indicator
         {
-            let texture_id = match player.facing_direction {
-                Direction::Up | Direction::Down | Direction::Left | Direction::Right => {
-                    "assets/direction_indicator.png"
-                }
-                Direction::UpLeft
-                | Direction::DownLeft
-                | Direction::DownRight
-                | Direction::UpRight => "assets/direction_indicator_diagonal.png",
+            let texture_id = if player.facing_direction.x == 0 || player.facing_direction.y == 0 {
+                "assets/direction_indicator.png"
+            } else {
+                "assets/direction_indicator_diagonal.png"
             };
             let texture = texture_creator.load_texture(texture_id).unwrap();
             let dest_rect = Rect::new(224, 224, 32, 32);
             let rotation = match player.facing_direction {
-                Direction::Up => 90.0,
-                Direction::Down => 270.0,
-                Direction::Left => 0.0,
-                Direction::Right => 180.0,
-                Direction::UpLeft => 0.0,
-                Direction::DownLeft => 270.0,
-                Direction::DownRight => 180.0,
-                Direction::UpRight => 90.0,
+                PositionComponent { x: 0, y: 1 } => 90.0,
+                PositionComponent { x: 0, y: -1 } => 270.0,
+                PositionComponent { x: -1, y: 0 } => 0.0,
+                PositionComponent { x: 1, y: 0 } => 180.0,
+                PositionComponent { x: -1, y: 1 } => 0.0,
+                PositionComponent { x: -1, y: -1 } => 270.0,
+                PositionComponent { x: 1, y: -1 } => 180.0,
+                PositionComponent { x: 1, y: 1 } => 90.0,
+                _ => unreachable!(),
             };
             canvas
                 .copy_ex(&texture, None, dest_rect, rotation, None, false, false)

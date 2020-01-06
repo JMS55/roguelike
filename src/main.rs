@@ -1,12 +1,9 @@
 #![windows_subsystem = "windows"]
 
-mod combat;
 mod components;
 mod entities;
 mod game;
 mod generate_dungeon;
-mod items;
-mod movement;
 mod spawn_enemies;
 mod stages;
 
@@ -14,8 +11,6 @@ use sdl2::event::Event;
 use stages::NewGameStage;
 use stages::Stage;
 use std::time::{Duration, Instant};
-
-const DELTA_TIME: Duration = Duration::from_nanos(16700000);
 
 fn main() {
     let sdl_context = sdl2::init().unwrap();
@@ -28,7 +23,6 @@ fn main() {
     let mut font = ttf_context.load_font("assets/04B_03__.ttf", 8).unwrap();
 
     let mut stage: Box<dyn Stage> = Box::new(NewGameStage {});
-
     let mut time_accumulator = Duration::from_secs(0);
     let mut previous_time = Instant::now();
     'main_loop: loop {
@@ -48,9 +42,9 @@ fn main() {
             previous_time = current_time;
 
             // Update
-            while time_accumulator >= DELTA_TIME {
+            while time_accumulator >= Duration::from_nanos(16700000) {
                 stage = stage.update();
-                time_accumulator -= DELTA_TIME;
+                time_accumulator -= Duration::from_nanos(16700000);
             }
 
             // Render

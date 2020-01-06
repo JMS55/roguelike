@@ -1,6 +1,6 @@
 use crate::game::Game;
-use crate::movement::Direction;
 use hecs::Entity;
+use std::ops::Add;
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct NameComponent {
@@ -11,8 +11,33 @@ pub struct NameComponent {
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct PositionComponent {
-    pub x: i16,
-    pub y: i16,
+    pub x: i32,
+    pub y: i32,
+}
+
+impl PositionComponent {
+    pub fn neighbors(&self) -> [PositionComponent; 8] {
+        [
+            *self + PositionComponent { x: -1, y: 1 },
+            *self + PositionComponent { x: 0, y: 1 },
+            *self + PositionComponent { x: 1, y: 1 },
+            *self + PositionComponent { x: 1, y: 0 },
+            *self + PositionComponent { x: 1, y: -1 },
+            *self + PositionComponent { x: 0, y: -1 },
+            *self + PositionComponent { x: -1, y: -1 },
+            *self + PositionComponent { x: -1, y: 0 },
+        ]
+    }
+}
+
+impl Add for PositionComponent {
+    type Output = Self;
+    fn add(self, other: Self) -> Self {
+        Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
@@ -22,12 +47,12 @@ pub struct SpriteComponent {
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct StatsComponent {
-    pub current_health: u16,
-    pub max_health: u16,
-    pub strength: u16,
-    pub luck: u16,
-    pub agility: u16,
-    pub focus: u16,
+    pub current_health: u32,
+    pub max_health: u32,
+    pub strength: u32,
+    pub luck: u32,
+    pub agility: u32,
+    pub focus: u32,
 }
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
@@ -38,9 +63,9 @@ pub enum TeamComponent {
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct PlayerComponent {
-    pub facing_direction: Direction,
+    pub facing_direction: PositionComponent,
     pub inventory: [Option<Entity>; 16],
-    pub turns_before_passive_healing: u16,
+    pub turns_before_passive_healing: u32,
 }
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]

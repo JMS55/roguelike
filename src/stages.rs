@@ -1,8 +1,6 @@
-use crate::combat::heal;
 use crate::components::*;
 use crate::game::Game;
 use crate::generate_dungeon::generate_dungeon;
-use crate::movement::{try_move, turn_player_towards, Direction};
 use crate::spawn_enemies::spawn_enemies;
 use hecs::Entity;
 use sdl2::keyboard::{KeyboardState, Scancode};
@@ -52,27 +50,6 @@ pub struct PlayerTurnStage {
     last_input_time: Instant,
 }
 
-impl PlayerTurnStage {
-    fn end_of_turn(&mut self) {
-        let mut should_heal_player = false;
-        {
-            let mut player = self
-                .game
-                .world
-                .get_mut::<PlayerComponent>(self.game.player_entity)
-                .unwrap();
-            player.turns_before_passive_healing -= 1;
-            if player.turns_before_passive_healing == 0 {
-                player.turns_before_passive_healing = 10;
-                should_heal_player = true;
-            }
-        }
-        if should_heal_player {
-            heal(self.game.player_entity, 2, &mut self.game);
-        }
-    }
-}
-
 impl Stage for PlayerTurnStage {
     fn input(&mut self, keyboard: &KeyboardState) {
         if self.last_input_time.elapsed() >= Duration::from_millis(150) {
@@ -105,26 +82,19 @@ impl Stage for PlayerTurnStage {
                 self.last_input_time = Instant::now();
                 keystate.0 = 1;
             }
-            self.action = match keystate {
-                (0, 0, _) => PlayerAction::None,
-                (1, 0, true) => PlayerAction::Move(Direction::Right),
-                (-1, 0, true) => PlayerAction::Move(Direction::Left),
-                (0, 1, true) => PlayerAction::Move(Direction::Up),
-                (0, -1, true) => PlayerAction::Move(Direction::Down),
-                (1, 1, true) => PlayerAction::Move(Direction::UpRight),
-                (1, -1, true) => PlayerAction::Move(Direction::DownRight),
-                (-1, 1, true) => PlayerAction::Move(Direction::UpLeft),
-                (-1, -1, true) => PlayerAction::Move(Direction::DownLeft),
-                (1, 0, false) => PlayerAction::Turn(Direction::Right),
-                (-1, 0, false) => PlayerAction::Turn(Direction::Left),
-                (0, 1, false) => PlayerAction::Turn(Direction::Up),
-                (0, -1, false) => PlayerAction::Turn(Direction::Down),
-                (1, 1, false) => PlayerAction::Turn(Direction::UpRight),
-                (1, -1, false) => PlayerAction::Turn(Direction::DownRight),
-                (-1, 1, false) => PlayerAction::Turn(Direction::UpLeft),
-                (-1, -1, false) => PlayerAction::Turn(Direction::DownLeft),
-                _ => unreachable!(),
-            };
+            if keystate.0 == 0 && keystate.1 == 0 {
+                self.action = PlayerAction::None;
+            } else if keystate.2 {
+                self.action = PlayerAction::Move(PositionComponent {
+                    x: keystate.0,
+                    y: keystate.1,
+                });
+            } else {
+                self.action = PlayerAction::Turn(PositionComponent {
+                    x: keystate.0,
+                    y: keystate.1,
+                });
+            }
             if keyboard.is_scancode_pressed(Scancode::E) {
                 self.last_input_time = Instant::now();
                 self.action = PlayerAction::Pass;
@@ -170,20 +140,7 @@ impl Stage for PlayerTurnStage {
                     .world
                     .get::<PositionComponent>(self.game.player_entity)
                     .unwrap();
-                let offset = match player.facing_direction {
-                    Direction::Up => PositionComponent { x: 0, y: 1 },
-                    Direction::Down => PositionComponent { x: 0, y: -1 },
-                    Direction::Left => PositionComponent { x: -1, y: 0 },
-                    Direction::Right => PositionComponent { x: 1, y: 0 },
-                    Direction::UpLeft => PositionComponent { x: -1, y: 1 },
-                    Direction::UpRight => PositionComponent { x: 1, y: 1 },
-                    Direction::DownLeft => PositionComponent { x: -1, y: -1 },
-                    Direction::DownRight => PositionComponent { x: 1, y: -1 },
-                };
-                let interacting_with_position = PositionComponent {
-                    x: player_position.x + offset.x,
-                    y: player_position.y + offset.y,
-                };
+                let interacting_with_position = player_position + player.facing_direction;
 
                 // If player facing and next to a staircase
                 if self
@@ -195,17 +152,17 @@ impl Stage for PlayerTurnStage {
                     .any(|(_, position)| *position == interacting_with_position)
                 {
                     // Heal the player by 20% of their max health
-                    let player_max_health = self
-                        .game
-                        .world
-                        .get::<StatsComponent>(self.game.player_entity)
-                        .unwrap()
-                        .max_health;
-                    heal(
-                        self.game.player_entity,
-                        (player_max_health as f64 * 0.2).round() as u16,
-                        &mut self.game,
-                    );
+                    {
+                        let mut player_stats = self
+                            .game
+                            .world
+                            .get_mut::<StatsComponent>(self.game.player_entity)
+                            .unwrap();
+                        player_stats.current_health = player_stats.max_health.min(
+                            player_stats.current_health
+                                + (player_stats.max_health as f64 * 0.2).round() as u32,
+                        );
+                    }
 
                     // Reset the player's position
                     *self
@@ -244,10 +201,38 @@ impl Stage for PlayerTurnStage {
                 }
             }
             PlayerAction::Turn(direction) => {
-                turn_player_towards(direction, &mut self.game);
+                self.game
+                    .world
+                    .get_mut::<PlayerComponent>(self.game.player_entity)
+                    .unwrap()
+                    .facing_direction = direction;
             }
             PlayerAction::Move(direction) => {
-                if try_move(self.game.player_entity, direction, &mut self.game).is_ok() {
+                self.game
+                    .world
+                    .get_mut::<PlayerComponent>(self.game.player_entity)
+                    .unwrap()
+                    .facing_direction = direction;
+
+                let player_position = *self
+                    .game
+                    .world
+                    .get::<PositionComponent>(self.game.player_entity)
+                    .unwrap();
+                let attempted_move_position = player_position + direction;
+                if self
+                    .game
+                    .world
+                    .query::<&PositionComponent>()
+                    .iter()
+                    .all(|(_, position)| *position != attempted_move_position)
+                {
+                    *self
+                        .game
+                        .world
+                        .get_mut::<PositionComponent>(self.game.player_entity)
+                        .unwrap() = attempted_move_position;
+
                     self.end_of_turn();
                     return Box::new(AITurnStage { game: self.game });
                 }
@@ -269,13 +254,41 @@ impl Stage for PlayerTurnStage {
     }
 }
 
+impl PlayerTurnStage {
+    fn end_of_turn(&mut self) {
+        // Heal player by 2 health every 10 turns
+        let mut should_heal_player = false;
+        {
+            let mut player = self
+                .game
+                .world
+                .get_mut::<PlayerComponent>(self.game.player_entity)
+                .unwrap();
+            player.turns_before_passive_healing -= 1;
+            if player.turns_before_passive_healing == 0 {
+                player.turns_before_passive_healing = 10;
+                should_heal_player = true;
+            }
+        }
+        if should_heal_player {
+            let mut player_stats = self
+                .game
+                .world
+                .get_mut::<StatsComponent>(self.game.player_entity)
+                .unwrap();
+            player_stats.current_health =
+                player_stats.max_health.min(player_stats.current_health + 2);
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 enum PlayerAction {
     None,
     Pass,
     Interact,
-    Turn(Direction),
-    Move(Direction),
+    Turn(PositionComponent),
+    Move(PositionComponent),
     UseItem(ItemSlot),
 }
 
@@ -311,12 +324,14 @@ impl Stage for AITurnStage {
             .unwrap();
         ai_entities_to_run.sort_by_key(|ai_entity| {
             if let Ok(ai_entity_position) = self.game.world.get::<PositionComponent>(*ai_entity) {
-                (ai_entity_position.x - player_position.x).abs() as u16
-                    + (ai_entity_position.y - player_position.y).abs() as u16
+                (ai_entity_position.x - player_position.x)
+                    .abs()
+                    .max((ai_entity_position.y - player_position.y).abs()) as u32
             } else {
-                0
+                u32::max_value()
             }
         });
+
         for ai_entity in ai_entities_to_run {
             // Duplicate the AI in case the entity dies during run()
             let ai = self
@@ -334,6 +349,16 @@ impl Stage for AITurnStage {
                         .insert_one(ai_entity, AIComponent { ai })
                         .unwrap();
                 }
+
+                // If player is dead, game over
+                let player_stats = *self
+                    .game
+                    .world
+                    .get::<StatsComponent>(self.game.player_entity)
+                    .unwrap();
+                if player_stats.current_health == 0 {
+                    return Box::new(GameOverStage { game: self.game });
+                }
             }
         }
 
@@ -342,6 +367,27 @@ impl Stage for AITurnStage {
             action: PlayerAction::None,
             last_input_time: Instant::now(),
         })
+    }
+
+    fn render(
+        &mut self,
+        canvas: &mut WindowCanvas,
+        texture_creator: &mut TextureCreator<WindowContext>,
+        font: &mut Font,
+    ) {
+        self.game.render(canvas, texture_creator, font);
+    }
+}
+
+pub struct GameOverStage {
+    game: Game,
+}
+
+impl Stage for GameOverStage {
+    fn input(&mut self, _: &KeyboardState) {}
+
+    fn update(self: Box<Self>) -> Box<dyn Stage> {
+        self
     }
 
     fn render(

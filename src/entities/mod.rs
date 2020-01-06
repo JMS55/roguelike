@@ -9,31 +9,26 @@ mod soul_spectre;
 mod volatile_husk;
 
 use crate::components::*;
-use crate::game::RNG;
-use crate::movement::Direction;
+use crate::game::{Game, RNG};
 use hecs::{Entity, World};
 use rand::seq::SliceRandom;
 use rand::Rng;
 
-pub fn create_random_enemy(
-    position: PositionComponent,
-    world: &mut World,
-    rng: &mut RNG,
-) -> Entity {
+pub fn create_random_enemy(position: PositionComponent, game: &mut Game) -> Entity {
     let create_function = [
-        arcane_ooze::create_arcane_ooze,
+        // arcane_ooze::create_arcane_ooze,
         danger_spider::create_danger_spider,
-        mimic::create_mimic,
+        // mimic::create_mimic,
         phase_bat::create_phase_bat,
-        pungent_ooze::create_pungent_ooze,
-        pyro_snake::create_pyro_snake,
-        skeleton_scout::create_skeleton_scout,
-        soul_spectre::create_soul_spectre,
-        volatile_husk::create_volatile_husk,
+        // pungent_ooze::create_pungent_ooze,
+        // pyro_snake::create_pyro_snake,
+        // skeleton_scout::create_skeleton_scout,
+        // soul_spectre::create_soul_spectre,
+        // volatile_husk::create_volatile_husk,
     ]
-    .choose(rng)
+    .choose(&mut game.rng)
     .unwrap();
-    (create_function)(position, world)
+    (create_function)(position, game)
 }
 
 pub fn create_player(world: &mut World, rng: &mut RNG) -> Entity {
@@ -47,7 +42,7 @@ pub fn create_player(world: &mut World, rng: &mut RNG) -> Entity {
         PositionComponent { x: 0, y: 0 },
         SpriteComponent { id: "player" },
         PlayerComponent {
-            facing_direction: Direction::Up,
+            facing_direction: PositionComponent { x: 0, y: 1 },
             inventory: [None; 16],
             turns_before_passive_healing: 10,
         },

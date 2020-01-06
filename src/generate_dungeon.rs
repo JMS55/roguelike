@@ -27,12 +27,12 @@ pub fn generate_dungeon(game: &mut Game) {
         for other_room in &game.rooms {
             let required_gap = game.dungeon_generation_rng.gen_range(3, 10);
             let x_gap = (room.center.x - other_room.center.x).abs()
-                - room.x_radius as i16
-                - other_room.x_radius as i16
+                - room.x_radius as i32
+                - other_room.x_radius as i32
                 - 3;
             let y_gap = (room.center.y - other_room.center.y).abs()
-                - room.y_radius as i16
-                - other_room.y_radius as i16
+                - room.y_radius as i32
+                - other_room.y_radius as i32
                 - 3;
             let actual_gap = x_gap.max(y_gap);
             if actual_gap < required_gap && actual_gap != -1 {
@@ -50,20 +50,20 @@ pub fn generate_dungeon(game: &mut Game) {
         }
         let end_room = &game.rooms[end_room_index];
         let start_x = game.dungeon_generation_rng.gen_range(
-            start_room.center.x - start_room.x_radius as i16,
-            start_room.center.x + start_room.x_radius as i16 + 1,
+            start_room.center.x - start_room.x_radius as i32,
+            start_room.center.x + start_room.x_radius as i32 + 1,
         );
         let start_y = game.dungeon_generation_rng.gen_range(
-            start_room.center.y - start_room.y_radius as i16,
-            start_room.center.y + start_room.y_radius as i16 + 1,
+            start_room.center.y - start_room.y_radius as i32,
+            start_room.center.y + start_room.y_radius as i32 + 1,
         );
         let end_x = game.dungeon_generation_rng.gen_range(
-            end_room.center.x - end_room.x_radius as i16,
-            end_room.center.x + end_room.x_radius as i16 + 1,
+            end_room.center.x - end_room.x_radius as i32,
+            end_room.center.x + end_room.x_radius as i32 + 1,
         );
         let end_y = game.dungeon_generation_rng.gen_range(
-            end_room.center.y - end_room.y_radius as i16,
-            end_room.center.y + end_room.y_radius as i16 + 1,
+            end_room.center.y - end_room.y_radius as i32,
+            end_room.center.y + end_room.y_radius as i32 + 1,
         );
         for x in start_x.min(end_x)..start_x.max(end_x) {
             game.floor_positions
@@ -78,8 +78,8 @@ pub fn generate_dungeon(game: &mut Game) {
     // Get list of all wall positions
     let mut wall_positions = HashSet::with_capacity(1600);
     for room in &game.rooms {
-        let x_radius = room.x_radius as i16;
-        let y_radius = room.y_radius as i16;
+        let x_radius = room.x_radius as i32;
+        let y_radius = room.y_radius as i32;
         for x in -(x_radius + 1)..=(x_radius + 1) {
             wall_positions.insert(PositionComponent {
                 x: room.center.x + x,
@@ -102,24 +102,27 @@ pub fn generate_dungeon(game: &mut Game) {
         }
     }
     for corridor_position in &game.floor_positions {
-        'neighbor_loop: for (x, y) in &corridor_position.get_neighbors() {
+        'neighbor_loop: for neighbor in &corridor_position.neighbors() {
             for room in &game.rooms {
-                let x_radius = room.x_radius as i16;
-                let y_radius = room.y_radius as i16;
+                let x_radius = room.x_radius as i32;
+                let y_radius = room.y_radius as i32;
                 let x_range = (room.center.x - x_radius - 1)..=(room.center.x + x_radius + 1);
                 let y_range = (room.center.y - y_radius - 1)..=(room.center.y + y_radius + 1);
-                if x_range.contains(x) && y_range.contains(y) {
+                if x_range.contains(&neighbor.x) && y_range.contains(&neighbor.y) {
                     continue 'neighbor_loop;
                 }
             }
-            wall_positions.insert(PositionComponent { x: *x, y: *y });
+            wall_positions.insert(PositionComponent {
+                x: neighbor.x,
+                y: neighbor.y,
+            });
         }
     }
 
     // Update list of floor tiles with floor tiles from rooms
     for room in &game.rooms {
-        let x_radius = room.x_radius as i16;
-        let y_radius = room.y_radius as i16;
+        let x_radius = room.x_radius as i32;
+        let y_radius = room.y_radius as i32;
         for x in -x_radius..=x_radius {
             for y in -y_radius..=y_radius {
                 game.floor_positions.insert(PositionComponent {
@@ -142,12 +145,12 @@ pub fn generate_dungeon(game: &mut Game) {
     // Create staircase entity
     let staircase_room = &game.rooms[1];
     let staircase_x = game.dungeon_generation_rng.gen_range(
-        staircase_room.center.x - staircase_room.x_radius as i16 + 1,
-        staircase_room.center.x + staircase_room.x_radius as i16,
+        staircase_room.center.x - staircase_room.x_radius as i32 + 1,
+        staircase_room.center.x + staircase_room.x_radius as i32,
     );
     let staircase_y = game.dungeon_generation_rng.gen_range(
-        staircase_room.center.y - staircase_room.y_radius as i16 + 1,
-        staircase_room.center.y + staircase_room.y_radius as i16,
+        staircase_room.center.y - staircase_room.y_radius as i32 + 1,
+        staircase_room.center.y + staircase_room.y_radius as i32,
     );
     entities::create_staircase(
         PositionComponent {
@@ -167,21 +170,6 @@ pub fn generate_dungeon(game: &mut Game) {
 
 pub struct Room {
     pub center: PositionComponent,
-    pub x_radius: u16,
-    pub y_radius: u16,
-}
-
-impl PositionComponent {
-    fn get_neighbors(self) -> [(i16, i16); 8] {
-        [
-            (self.x + 1, self.y),
-            (self.x - 1, self.y),
-            (self.x, self.y + 1),
-            (self.x, self.y - 1),
-            (self.x + 1, self.y + 1),
-            (self.x + 1, self.y - 1),
-            (self.x - 1, self.y + 1),
-            (self.x - 1, self.y - 1),
-        ]
-    }
+    pub x_radius: u32,
+    pub y_radius: u32,
 }
