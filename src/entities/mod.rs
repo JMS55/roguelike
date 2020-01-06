@@ -1,5 +1,6 @@
 mod arcane_ooze;
 mod danger_spider;
+mod discordant_soul;
 mod mimic;
 mod phase_bat;
 mod pungent_ooze;

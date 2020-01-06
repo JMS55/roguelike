@@ -2,14 +2,14 @@ use crate::components::*;
 use crate::game::Game;
 use hecs::{Entity, World};
 
-pub fn create_soul_spectre(position: PositionComponent, world: &mut World) -> Entity {
+fn create_discordant_soul(position: PositionComponent, world: &mut World) -> Entity {
     todo!();
 }
 
 #[derive(Clone)]
-struct SoulSpectreAI {}
+struct DiscordantSoulAI {}
 
-impl AI for SoulSpectreAI {
+impl AI for DiscordantSoulAI {
     fn run(&mut self, this_entity: Entity, game: &mut Game) {
         todo!();
     }
