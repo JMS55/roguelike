@@ -168,7 +168,7 @@ impl DangerSpiderAI {
                 }
             }
 
-            for neighbor in &neighbors(current) {
+            for neighbor in &current.neighbors() {
                 if !previously_visited.contains_key(&neighbor) && !obstacles.contains(&neighbor) {
                     previously_visited.insert(*neighbor, previously_visited[&current] + 1);
                     frontier.push_back(*neighbor);
@@ -194,7 +194,7 @@ impl DangerSpiderAI {
             .iter()
         {
             if team == &TeamComponent::Ally {
-                for neighbor in &neighbors(*position) {
+                for neighbor in &position.neighbors() {
                     targets.insert(*neighbor, entity);
                 }
             }
@@ -213,7 +213,7 @@ impl DangerSpiderAI {
                 return Some(*entity);
             }
 
-            for neighbor in &neighbors(current) {
+            for neighbor in &current.neighbors() {
                 if !previously_visited.contains_key(&neighbor) && !obstacles.contains(&neighbor) {
                     previously_visited.insert(*neighbor, previously_visited[&current] + 1);
                     frontier.push_back(*neighbor);
