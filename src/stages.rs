@@ -268,8 +268,6 @@ impl Stage for PlayerTurnStage {
 
 impl PlayerTurnStage {
     fn end_of_turn(&mut self) -> bool {
-        let mut should_end_turn = false;
-
         // Heal player by 2 health every 10 turns
         let mut should_heal_player = false;
         {
@@ -295,53 +293,39 @@ impl PlayerTurnStage {
         }
 
         // Apply burn damage
-        if self
+        let mut should_remove_burn = false;
+        if let Ok(mut burn) = self
             .game
             .world
-            .get::<BurnComponent>(self.game.player_entity)
-            .is_ok()
+            .get_mut::<BurnComponent>(self.game.player_entity)
         {
-            {
-                let mut player_stats = self
-                    .game
-                    .world
-                    .get_mut::<StatsComponent>(self.game.player_entity)
-                    .unwrap();
-                let mut burn = self
-                    .game
-                    .world
-                    .get_mut::<BurnComponent>(self.game.player_entity)
-                    .unwrap();
-
-                player_stats.current_health = player_stats
-                    .current_health
-                    .saturating_sub(burn.damage_per_turn);
-                burn.turns_left -= 1;
-            }
-
-            let burn = *self
+            let mut player_stats = self
                 .game
                 .world
-                .get::<BurnComponent>(self.game.player_entity)
+                .get_mut::<StatsComponent>(self.game.player_entity)
                 .unwrap();
+            player_stats.current_health = player_stats
+                .current_health
+                .saturating_sub(burn.damage_per_turn);
+
+            burn.turns_left -= 1;
             if burn.turns_left == 0 {
-                self.game
-                    .world
-                    .remove_one::<BurnComponent>(self.game.player_entity)
-                    .unwrap();
-            }
-
-            let player_stats = *self
-                .game
-                .world
-                .get::<StatsComponent>(self.game.player_entity)
-                .unwrap();
-            if player_stats.current_health == 0 {
-                should_end_turn = true;
+                should_remove_burn = true;
             }
         }
+        if should_remove_burn {
+            self.game
+                .world
+                .remove_one::<BurnComponent>(self.game.player_entity)
+                .unwrap();
+        }
 
-        should_end_turn
+        self.game
+            .world
+            .get::<StatsComponent>(self.game.player_entity)
+            .unwrap()
+            .current_health
+            == 0
     }
 }
 
