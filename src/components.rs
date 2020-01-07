@@ -79,3 +79,9 @@ pub trait AI: Send + Sync + 'static {
     fn run(&mut self, this_entity: Entity, game: &mut Game);
     fn clone(&self) -> Box<dyn AI>;
 }
+
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub struct BurnComponent {
+    pub damage_per_turn: u32,
+    pub turns_left: u32,
+}

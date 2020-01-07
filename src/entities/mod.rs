@@ -22,7 +22,7 @@ pub fn create_random_enemy(position: PositionComponent, game: &mut Game) -> Enti
         // mimic::create_mimic,
         phase_bat::create_phase_bat,
         // pungent_ooze::create_pungent_ooze,
-        // pyro_snake::create_pyro_snake,
+        pyro_snake::create_pyro_snake,
         // skeleton_scout::create_skeleton_scout,
         // soul_spectre::create_soul_spectre,
         // volatile_husk::create_volatile_husk,

@@ -126,7 +126,9 @@ impl Stage for PlayerTurnStage {
         match self.action {
             PlayerAction::None => {}
             PlayerAction::Pass => {
-                self.end_of_turn();
+                if self.end_of_turn() {
+                    return Box::new(GameOverStage { game: self.game });
+                }
                 return Box::new(AITurnStage { game: self.game });
             }
             PlayerAction::Interact => {
@@ -164,6 +166,12 @@ impl Stage for PlayerTurnStage {
                         );
                     }
 
+                    // Remove all debuffs
+                    let _ = self
+                        .game
+                        .world
+                        .remove_one::<BurnComponent>(self.game.player_entity);
+
                     // Reset the player's position
                     *self
                         .game
@@ -192,7 +200,9 @@ impl Stage for PlayerTurnStage {
                     generate_dungeon(&mut self.game);
                     spawn_enemies(&mut self.game);
 
-                    self.end_of_turn();
+                    if self.end_of_turn() {
+                        return Box::new(GameOverStage { game: self.game });
+                    }
                     return Box::new(PlayerTurnStage {
                         game: self.game,
                         action: PlayerAction::None,
@@ -233,7 +243,9 @@ impl Stage for PlayerTurnStage {
                         .get_mut::<PositionComponent>(self.game.player_entity)
                         .unwrap() = attempted_move_position;
 
-                    self.end_of_turn();
+                    if self.end_of_turn() {
+                        return Box::new(GameOverStage { game: self.game });
+                    }
                     return Box::new(AITurnStage { game: self.game });
                 }
             }
@@ -255,7 +267,9 @@ impl Stage for PlayerTurnStage {
 }
 
 impl PlayerTurnStage {
-    fn end_of_turn(&mut self) {
+    fn end_of_turn(&mut self) -> bool {
+        let mut should_end_turn = false;
+
         // Heal player by 2 health every 10 turns
         let mut should_heal_player = false;
         {
@@ -279,6 +293,55 @@ impl PlayerTurnStage {
             player_stats.current_health =
                 player_stats.max_health.min(player_stats.current_health + 2);
         }
+
+        // Apply burn damage
+        if self
+            .game
+            .world
+            .get::<BurnComponent>(self.game.player_entity)
+            .is_ok()
+        {
+            {
+                let mut player_stats = self
+                    .game
+                    .world
+                    .get_mut::<StatsComponent>(self.game.player_entity)
+                    .unwrap();
+                let mut burn = self
+                    .game
+                    .world
+                    .get_mut::<BurnComponent>(self.game.player_entity)
+                    .unwrap();
+
+                player_stats.current_health = player_stats
+                    .current_health
+                    .saturating_sub(burn.damage_per_turn);
+                burn.turns_left -= 1;
+            }
+
+            let burn = *self
+                .game
+                .world
+                .get::<BurnComponent>(self.game.player_entity)
+                .unwrap();
+            if burn.turns_left == 0 {
+                self.game
+                    .world
+                    .remove_one::<BurnComponent>(self.game.player_entity)
+                    .unwrap();
+            }
+
+            let player_stats = *self
+                .game
+                .world
+                .get::<StatsComponent>(self.game.player_entity)
+                .unwrap();
+            if player_stats.current_health == 0 {
+                should_end_turn = true;
+            }
+        }
+
+        should_end_turn
     }
 }
 
@@ -359,6 +422,33 @@ impl Stage for AITurnStage {
                 if player_stats.current_health == 0 {
                     return Box::new(GameOverStage { game: self.game });
                 }
+            }
+        }
+
+        // Apply burn damage
+        let burn_entities = self
+            .game
+            .world
+            .query::<()>()
+            .with::<BurnComponent>()
+            .without::<PlayerComponent>()
+            .iter()
+            .map(|(entity, _)| entity)
+            .collect::<Vec<Entity>>();
+        for entity in &burn_entities {
+            let mut stats = self.game.world.get_mut::<StatsComponent>(*entity).unwrap();
+            let mut burn = self.game.world.get_mut::<BurnComponent>(*entity).unwrap();
+            stats.current_health = stats.current_health.saturating_sub(burn.damage_per_turn);
+            burn.turns_left -= 1;
+        }
+        for entity in burn_entities {
+            let stats = *self.game.world.get::<StatsComponent>(entity).unwrap();
+            let burn = *self.game.world.get::<BurnComponent>(entity).unwrap();
+            if burn.turns_left == 0 {
+                self.game.world.remove_one::<BurnComponent>(entity).unwrap();
+            }
+            if stats.current_health == 0 {
+                self.game.world.despawn(entity).unwrap();
             }
         }
 
