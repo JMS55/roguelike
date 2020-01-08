@@ -1,19 +1,20 @@
-mod arcane_ooze;
+// mod arcane_ooze;
 mod danger_spider;
-mod discordant_soul;
-mod mimic;
+// mod discordant_soul;
+// mod mimic;
 mod phase_bat;
-mod pungent_ooze;
+// mod pungent_ooze;
 mod pyro_snake;
 mod skeleton_scout;
-mod soul_spectre;
-mod volatile_husk;
+// mod soul_spectre;
+// mod volatile_husk;
 
 use crate::components::*;
-use crate::game::{Game, RNG};
+use crate::game::Game;
 use hecs::{Entity, World};
 use rand::seq::SliceRandom;
 use rand::Rng;
+use rand_pcg::Pcg64;
 
 pub fn create_random_enemy(position: PositionComponent, game: &mut Game) -> Entity {
     let create_function = [
@@ -32,39 +33,28 @@ pub fn create_random_enemy(position: PositionComponent, game: &mut Game) -> Enti
     (create_function)(position, game)
 }
 
-pub fn create_player(world: &mut World, rng: &mut RNG) -> Entity {
-    let max_health = rng.gen_range(12, 31);
-    world.spawn((
+pub fn create_player(ecs: &mut World, rng: &mut Pcg64) -> Entity {
+    ecs.spawn((
         NameComponent {
-            name: "Player",
-            concealed_name: "???",
-            is_concealed: false,
+            name: |_, _| "Player".to_owned(),
         },
         PositionComponent { x: 0, y: 0 },
         SpriteComponent { id: "player" },
-        PlayerComponent {
-            facing_direction: PositionComponent { x: 0, y: 1 },
-            inventory: [None; 16],
-            turns_before_passive_healing: 10,
-        },
-        StatsComponent {
-            current_health: max_health,
-            max_health,
-            strength: rng.gen_range(1, 13),
-            luck: rng.gen_range(1, 13),
-            agility: rng.gen_range(1, 13),
-            focus: rng.gen_range(1, 13),
-        },
-        TeamComponent::Ally,
+        CombatComponent::new(
+            rng.gen_range(12, 31),
+            rng.gen_range(4, 13),
+            rng.gen_range(4, 13),
+            rng.gen_range(4, 13),
+            rng.gen_range(4, 13),
+            Team::Player,
+        ),
     ))
 }
 
-pub fn create_staircase(position: PositionComponent, world: &mut World) -> Entity {
-    world.spawn((
+pub fn create_staircase(position: PositionComponent, ecs: &mut World) -> Entity {
+    ecs.spawn((
         NameComponent {
-            name: "Staircase",
-            concealed_name: "???",
-            is_concealed: false,
+            name: |_, _| "Staircase".to_owned(),
         },
         position,
         SpriteComponent { id: "staircase" },
@@ -72,12 +62,10 @@ pub fn create_staircase(position: PositionComponent, world: &mut World) -> Entit
     ))
 }
 
-pub fn create_wall(position: PositionComponent, world: &mut World, rng: &mut RNG) -> Entity {
-    world.spawn((
+pub fn create_wall(position: PositionComponent, ecs: &mut World, rng: &mut Pcg64) -> Entity {
+    ecs.spawn((
         NameComponent {
-            name: "Wall",
-            concealed_name: "???",
-            is_concealed: false,
+            name: |_, _| "Wall".to_owned(),
         },
         position,
         SpriteComponent {

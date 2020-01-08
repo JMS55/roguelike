@@ -1,5 +1,5 @@
 use crate::components::*;
-use crate::game::Game;
+use crate::game::{DamageType, Game};
 use hecs::Entity;
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -7,12 +7,9 @@ use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 
 pub fn create_skeleton_scout(position: PositionComponent, game: &mut Game) -> Entity {
-    let max_health = game.rng.gen_range(8, 15);
-    game.world.spawn((
+    game.ecs.spawn((
         NameComponent {
-            name: "Skeleton Scout",
-            concealed_name: "???",
-            is_concealed: false,
+            name: |_, _| "Skeleton Scout".to_owned(),
         },
         position,
         SpriteComponent {
@@ -24,15 +21,14 @@ pub fn create_skeleton_scout(position: PositionComponent, game: &mut Game) -> En
                 patrol_goal: None,
             }),
         },
-        StatsComponent {
-            current_health: max_health,
-            max_health,
-            strength: game.rng.gen_range(12, 16),
-            luck: game.rng.gen_range(5, 12),
-            agility: game.rng.gen_range(2, 8),
-            focus: game.rng.gen_range(4, 7),
-        },
-        TeamComponent::AI,
+        CombatComponent::new(
+            game.rng.gen_range(10, 17),
+            game.rng.gen_range(4, 13),
+            game.rng.gen_range(4, 13),
+            game.rng.gen_range(4, 13),
+            game.rng.gen_range(4, 13),
+            Team::Enemy,
+        ),
     ))
 }
 
@@ -44,7 +40,7 @@ struct SkeletonScoutAI {
 
 impl AI for SkeletonScoutAI {
     fn run(&mut self, this_entity: Entity, game: &mut Game) {
-        let this_position = *game.world.get::<PositionComponent>(this_entity).unwrap();
+        let this_position = *game.ecs.get::<PositionComponent>(this_entity).unwrap();
 
         // Ensure chase_target is valid
         if let Some(chase_target) = self.chase_target {
@@ -61,11 +57,11 @@ impl AI for SkeletonScoutAI {
             loop {
                 let room = game.rooms.choose(&mut game.rng).unwrap();
                 self.patrol_goal = Some(PositionComponent {
-                    x: game.dungeon_generation_rng.gen_range(
+                    x: game.rng.gen_range(
                         room.center.x - room.x_radius as i32,
                         room.center.x + room.x_radius as i32 + 1,
                     ),
-                    y: game.dungeon_generation_rng.gen_range(
+                    y: game.rng.gen_range(
                         room.center.y - room.y_radius as i32,
                         room.center.y + room.y_radius as i32 + 1,
                     ),
@@ -81,7 +77,7 @@ impl AI for SkeletonScoutAI {
             match self.chase_target {
                 Some(chase_target) => {
                     let chase_target_position =
-                        *game.world.get::<PositionComponent>(chase_target).unwrap();
+                        *game.ecs.get::<PositionComponent>(chase_target).unwrap();
                     Self::move_towards(
                         this_entity,
                         chase_target_position,
@@ -112,15 +108,15 @@ impl AI for SkeletonScoutAI {
 impl SkeletonScoutAI {
     fn is_chase_target_still_valid(this_entity: Entity, chase_target: Entity, game: &Game) -> bool {
         // Remove chase target if it's no longer alive
-        if !game.world.contains(chase_target) {
+        if !game.ecs.contains(chase_target) {
             return false;
         }
 
         // Remove chase target if it's more than 4 tiles away by path length
-        let this_position = *game.world.get::<PositionComponent>(this_entity).unwrap();
-        let chase_target_position = *game.world.get::<PositionComponent>(chase_target).unwrap();
+        let this_position = *game.ecs.get::<PositionComponent>(this_entity).unwrap();
+        let chase_target_position = *game.ecs.get::<PositionComponent>(chase_target).unwrap();
         let obstacles = game
-            .world
+            .ecs
             .query::<&PositionComponent>()
             .iter()
             .map(|(_, position)| *position)
@@ -150,21 +146,21 @@ impl SkeletonScoutAI {
         true
     }
 
-    // Try to find an entity with TeamComponent::Ally and at most 3 tiles away by path length
+    // Try to find an entity not on team Enemy and at most 3 tiles away by path length
     fn find_chase_target(this_position: PositionComponent, game: &Game) -> Option<Entity> {
         let obstacles = game
-            .world
+            .ecs
             .query::<&PositionComponent>()
             .iter()
             .map(|(_, position)| *position)
             .collect::<HashSet<PositionComponent>>();
         let mut targets = HashMap::new();
-        for (entity, (position, team)) in game
-            .world
-            .query::<(&PositionComponent, &TeamComponent)>()
+        for (entity, (position, combat)) in game
+            .ecs
+            .query::<(&PositionComponent, &CombatComponent)>()
             .iter()
         {
-            if team == &TeamComponent::Ally {
+            if combat.team != Team::Enemy {
                 for neighbor in &position.neighbors() {
                     targets.insert(*neighbor, entity);
                 }
@@ -197,8 +193,8 @@ impl SkeletonScoutAI {
 
     // Returns whether the attack went through or not
     fn try_attack(this_entity: Entity, chase_target: Option<Entity>, game: &mut Game) -> bool {
-        let this_position = *game.world.get::<PositionComponent>(this_entity).unwrap();
-        let this_stats = *game.world.get::<StatsComponent>(this_entity).unwrap();
+        let this_position = *game.ecs.get::<PositionComponent>(this_entity).unwrap();
+        let this_combat = *game.ecs.get::<CombatComponent>(this_entity).unwrap();
 
         let mut target = None;
         for offset in &[
@@ -208,12 +204,11 @@ impl SkeletonScoutAI {
             PositionComponent { x: 0, y: 2 },
         ] {
             target = game
-                .world
-                .query::<(&PositionComponent, &TeamComponent)>()
-                .with::<StatsComponent>()
+                .ecs
+                .query::<(&PositionComponent, &CombatComponent)>()
                 .iter()
-                .find_map(|(entity, (position, team))| {
-                    if *position == this_position + *offset && *team == TeamComponent::Ally {
+                .find_map(|(entity, (position, combat))| {
+                    if *position == this_position + *offset && combat.team != Team::Enemy {
                         Some(entity)
                     } else {
                         None
@@ -227,7 +222,7 @@ impl SkeletonScoutAI {
         // 33% chance to move 1 tile if unable to attack anything, and there is a target 1 tile away
         if target == None && game.rng.gen_bool(0.33) {
             let obstacles = game
-                .world
+                .ecs
                 .query::<&PositionComponent>()
                 .iter()
                 .map(|(_, position)| *position)
@@ -242,12 +237,12 @@ impl SkeletonScoutAI {
                         PositionComponent { x: 0, y: 2 },
                     ] {
                         target = game
-                            .world
-                            .query::<(&PositionComponent, &TeamComponent)>()
-                            .with::<StatsComponent>()
+                            .ecs
+                            .query::<(&PositionComponent, &CombatComponent)>()
                             .iter()
-                            .find_map(|(entity, (position, team))| {
-                                if *position == *neighbor + *offset && *team == TeamComponent::Ally
+                            .find_map(|(entity, (position, combat))| {
+                                if *position == this_position + *offset
+                                    && combat.team != Team::Enemy
                                 {
                                     Some(entity)
                                 } else {
@@ -264,10 +259,7 @@ impl SkeletonScoutAI {
                         }
                     }
                     if let Some(new_position) = new_position {
-                        *game
-                            .world
-                            .get_mut::<PositionComponent>(this_entity)
-                            .unwrap() = new_position;
+                        *game.ecs.get_mut::<PositionComponent>(this_entity).unwrap() = new_position;
                         break;
                     }
                 }
@@ -275,18 +267,7 @@ impl SkeletonScoutAI {
         }
 
         if let Some(target) = target {
-            let mut target_stats = game.world.get_mut::<StatsComponent>(target).unwrap();
-            let attack_missed = game.rng.gen_bool(target_stats.agility as f64 / 100.0);
-            if !attack_missed {
-                let minimum_damge = (this_stats.strength as f64 / 2.0).round() as u32;
-                let damage = game.rng.gen_range(minimum_damge, minimum_damge + 10);
-                target_stats.current_health = target_stats.current_health.saturating_sub(damage);
-
-                if target_stats.current_health == 0 && target != game.player_entity {
-                    drop(target_stats);
-                    game.world.despawn(target).unwrap();
-                }
-            }
+            game.damage_entity(target, this_combat.get_strength(), DamageType::Strength);
             true
         } else {
             false
@@ -315,9 +296,9 @@ impl SkeletonScoutAI {
             }
         }
 
-        let this_position = *game.world.get::<PositionComponent>(this_entity).unwrap();
+        let this_position = *game.ecs.get::<PositionComponent>(this_entity).unwrap();
         let obstacles = game
-            .world
+            .ecs
             .query::<&PositionComponent>()
             .iter()
             .map(|(_, position)| *position)
@@ -363,10 +344,7 @@ impl SkeletonScoutAI {
             while came_from[&current] != this_position {
                 current = came_from[&current];
             }
-            *game
-                .world
-                .get_mut::<PositionComponent>(this_entity)
-                .unwrap() = current;
+            *game.ecs.get_mut::<PositionComponent>(this_entity).unwrap() = current;
             true
         } else {
             false
