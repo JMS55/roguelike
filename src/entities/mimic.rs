@@ -1,8 +1,8 @@
 use crate::components::*;
 use crate::game::Game;
-use hecs::{Entity, World};
+use hecs::Entity;
 
-pub fn create_mimic(position: PositionComponent, world: &mut World) -> Entity {
+pub fn create_mimic(position: PositionComponent, game: &mut Game) -> Entity {
     todo!();
 }
 

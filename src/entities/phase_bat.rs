@@ -71,7 +71,11 @@ impl AI for PhaseBatAI {
         }
 
         // Attack, otherwise move
-        if Self::try_attack(this_entity, self.chase_target, game) {
+        let attack_result = Self::try_attack(this_entity, self.chase_target, game);
+        if !game.ecs.contains(this_entity) {
+            return;
+        }
+        if attack_result {
             // If anything was hit by the attack, increase this entity's agility by 2
             game.ecs
                 .get_mut::<CombatComponent>(this_entity)
@@ -133,8 +137,6 @@ impl PhaseBatAI {
         while let Some(current) = frontier.pop_front() {
             if current == chase_target_position {
                 if previously_visited[&current] > 3 {
-                    dbg!(frontier.len(), previously_visited.len());
-
                     return false;
                 }
             }

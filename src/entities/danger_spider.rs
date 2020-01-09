@@ -102,7 +102,11 @@ impl AI for DangerSpiderAI {
         }
 
         // Attack, otherwise move
-        if !Self::try_attack(this_entity, self.chase_target, game) {
+        let attack_result = Self::try_attack(this_entity, self.chase_target, game);
+        if !game.ecs.contains(this_entity) {
+            return;
+        }
+        if !attack_result {
             match self.chase_target {
                 Some(chase_target) => {
                     let chase_target_position =
@@ -158,8 +162,6 @@ impl DangerSpiderAI {
         while let Some(current) = frontier.pop_front() {
             if current == chase_target_position {
                 if previously_visited[&current] > 3 {
-                    dbg!(frontier.len(), previously_visited.len());
-
                     return false;
                 }
             }

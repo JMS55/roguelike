@@ -191,6 +191,7 @@ impl Game {
                                 player_combat.agility_buff = (0, 0);
                                 player_combat.luck_buff = (0, 0);
                                 player_combat.magic_immune_buff = false;
+                                player_combat.explode_on_death_buff = (0, 0);
 
                                 // Remove all debuffs
                                 player_combat.strength_debuff = (0, 0);
@@ -330,7 +331,13 @@ impl Game {
             {
                 let dest_rect =
                     Rect::new((position.x * 32) as i32, (position.y * 32) as i32, 32, 32);
-                canvas.copy(&textures[sprite.id], None, dest_rect).unwrap();
+                canvas
+                    .copy(
+                        &textures.get(sprite.id).unwrap_or(&textures["placeholder"]),
+                        None,
+                        dest_rect,
+                    )
+                    .unwrap();
             }
         }
 
@@ -389,9 +396,39 @@ impl Game {
             let damage = damage_amount.saturating_sub(damage_negated);
             entity_combat.current_health = entity_combat.current_health.saturating_sub(damage);
 
-            if entity_combat.current_health == 0 && entity != self.player_entity {
+            if entity_combat.current_health == 0 {
+                let (explosion_damage, explosion_radius) = entity_combat.explode_on_death_buff;
                 drop(entity_combat);
-                self.ecs.despawn(entity).unwrap();
+
+                if entity != self.player_entity {
+                    self.ecs.despawn(entity).unwrap();
+                }
+
+                // Handle explode on death buff
+                if explosion_radius != 0 {
+                    let explosion_center = *self.ecs.get::<PositionComponent>(entity).unwrap();
+                    let entities_hit_by_explosion = self
+                        .ecs
+                        .query::<&PositionComponent>()
+                        .with::<CombatComponent>()
+                        .iter()
+                        .filter_map(|(entity, position)| {
+                            if (position.x - explosion_center.x)
+                                .abs()
+                                .max((position.y - explosion_center.y).abs())
+                                as u32
+                                <= explosion_radius
+                            {
+                                Some(entity)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<Entity>>();
+                    for entity in entities_hit_by_explosion {
+                        self.damage_entity(entity, explosion_damage, DamageType::None);
+                    }
+                }
             }
         }
     }

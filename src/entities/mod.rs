@@ -1,13 +1,13 @@
-// mod arcane_ooze;
+mod arcane_ooze;
 mod danger_spider;
-// mod discordant_soul;
-// mod mimic;
+mod discordant_soul;
+mod mimic;
 mod phase_bat;
-// mod pungent_ooze;
+mod pungent_ooze;
 mod pyro_snake;
 mod skeleton_scout;
-// mod soul_spectre;
-// mod volatile_husk;
+mod soul_spectre;
+mod volatile_husk;
 
 use crate::components::*;
 use crate::game::Game;
@@ -18,15 +18,15 @@ use rand_pcg::Pcg64;
 
 pub fn create_random_enemy(position: PositionComponent, game: &mut Game) -> Entity {
     let create_function = [
-        // arcane_ooze::create_arcane_ooze,
+        arcane_ooze::create_arcane_ooze,
         danger_spider::create_danger_spider,
         // mimic::create_mimic,
         phase_bat::create_phase_bat,
-        // pungent_ooze::create_pungent_ooze,
+        pungent_ooze::create_pungent_ooze,
         pyro_snake::create_pyro_snake,
         skeleton_scout::create_skeleton_scout,
         // soul_spectre::create_soul_spectre,
-        // volatile_husk::create_volatile_husk,
+        volatile_husk::create_volatile_husk,
     ]
     .choose(&mut game.rng)
     .unwrap();

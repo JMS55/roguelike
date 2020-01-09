@@ -71,7 +71,11 @@ impl AI for PyroSnakeAI {
         }
 
         // Attack, otherwise move
-        if let Some(attack_target) = Self::try_attack(this_entity, self.chase_target, game) {
+        let attack_result = Self::try_attack(this_entity, self.chase_target, game);
+        if !game.ecs.contains(this_entity) {
+            return;
+        }
+        if let Some(attack_target) = attack_result {
             // Apply a burn to the target, if doing so would result in more damage over time, and if the target is still alive
             if let Ok(mut attack_target_combat) = game.ecs.get_mut::<CombatComponent>(attack_target)
             {
@@ -137,8 +141,6 @@ impl PyroSnakeAI {
         while let Some(current) = frontier.pop_front() {
             if current == chase_target_position {
                 if previously_visited[&current] > 3 {
-                    dbg!(frontier.len(), previously_visited.len());
-
                     return false;
                 }
             }

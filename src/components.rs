@@ -58,6 +58,7 @@ pub struct CombatComponent {
     pub agility_buff: (u32, u32),  // Amount, Turns left
     pub luck_buff: (u32, u32),     // Amount, Turns left
     pub magic_immune_buff: bool,
+    pub explode_on_death_buff: (u32, u32), // Damage, Radius
 
     pub strength_debuff: (u32, u32), // Amount, Turns left
     pub focus_debuff: (u32, u32),    // Amount, Turns left
@@ -89,6 +90,7 @@ impl CombatComponent {
             agility_buff: (0, 0),
             luck_buff: (0, 0),
             magic_immune_buff: false,
+            explode_on_death_buff: (0, 0),
 
             strength_debuff: (0, 0),
             focus_debuff: (0, 0),
