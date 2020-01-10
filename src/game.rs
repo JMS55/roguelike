@@ -87,7 +87,6 @@ impl Game {
         {
             // If actor queue is empty, add player and then all AI entities
             if self.actor_queue.is_empty() {
-                self.actor_queue.push(self.player_entity);
                 self.actor_queue.extend(
                     self.ecs
                         .query::<()>()
@@ -95,6 +94,7 @@ impl Game {
                         .iter()
                         .map(|(entity, _)| entity),
                 );
+                self.actor_queue.push(self.player_entity);
             }
 
             // Run next actor
@@ -163,7 +163,10 @@ impl Game {
                         player_acted = true;
                         self.last_input_time = Instant::now();
                     }
-                    if keyboard.is_scancode_pressed(Scancode::Q) {
+                    if keyboard.is_scancode_pressed(Scancode::Q)
+                        && (self.player_facing_direction.x == 0
+                            || self.player_facing_direction.y == 0)
+                    {
                         let player_position = *self
                             .ecs
                             .get::<PositionComponent>(self.player_entity)
@@ -210,6 +213,52 @@ impl Game {
                             self.next_floor();
                         }
 
+                        // Disguised Mimic interaction
+                        let mimic_entity = self
+                            .ecs
+                            .query::<(&MimicComponent, &PositionComponent)>()
+                            .iter()
+                            .find_map(|(entity, (mimic_component, position))| {
+                                if *position == interacting_with_position
+                                    && mimic_component.disguised
+                                {
+                                    Some(entity)
+                                } else {
+                                    None
+                                }
+                            });
+                        if let Some(mimic_entity) = mimic_entity {
+                            // Undisguise Mimic
+                            self.ecs
+                                .get_mut::<MimicComponent>(mimic_entity)
+                                .unwrap()
+                                .disguised = false;
+
+                            // Mimic attacks Player
+                            let mimic_combat =
+                                *self.ecs.get::<CombatComponent>(mimic_entity).unwrap();
+                            self.damage_entity(DamageInfo {
+                                target: self.player_entity,
+                                damage_amount: mimic_combat.get_strength(),
+                                damage_type: DamageType::Strength,
+                                variance: true,
+                            });
+
+                            // Mimic starts chasing player
+                            self.ecs
+                                .insert_one(
+                                    mimic_entity,
+                                    AIComponent {
+                                        ai: Box::new(entities::MimicAI {
+                                            chase_target: Some(self.player_entity),
+                                        }),
+                                    },
+                                )
+                                .unwrap();
+
+                            player_acted = true;
+                        }
+
                         self.last_input_time = Instant::now();
                     }
 
@@ -223,12 +272,12 @@ impl Game {
                 if let Ok(mut ai) = self
                     .ecs
                     .get_mut::<AIComponent>(entity)
-                    // Duplicate the AI in case the entity dies during run()
+                    // Clone the AI to prevent borrow errors
                     .map(|ai_component| ai_component.ai.clone())
                 {
                     // Run the enitiy's AI. This mutates the copy we made.
                     ai.run(entity, self);
-                    // Overwrite the old AI with the copy we made
+                    // Overwrite the old AI with the copy we made (does nothing if the entity is dead)
                     let _ = self.ecs.insert_one(entity, AIComponent { ai });
                     self.entity_end_of_turn(entity);
                 }
@@ -420,10 +469,18 @@ impl Game {
             }
             target_combat.current_health = target_combat.current_health.saturating_sub(damage);
 
+            // Undisguise Mimic
+            if let Ok(mut mimic_component) = self.ecs.get_mut::<MimicComponent>(damage_info.target)
+            {
+                mimic_component.disguised = false;
+            }
+
+            // On Death
             if target_combat.current_health == 0 {
                 let (explosion_damage, explosion_radius) = target_combat.explode_on_death_buff;
                 drop(target_combat);
 
+                // Delete entity if they are not the player
                 if damage_info.target != self.player_entity {
                     self.ecs.despawn(damage_info.target).unwrap();
                 }
@@ -696,14 +753,21 @@ impl Game {
         // Apply burn debuff damage
         let burn_damage = entity_combat.burn_debuff.0;
         drop(entity_combat);
-        self.damage_entity(DamageInfo {
-            target: entity,
-            damage_amount: burn_damage,
-            damage_type: DamageType::None,
-            variance: false,
-        });
+        if burn_damage != 0 {
+            self.damage_entity(DamageInfo {
+                target: entity,
+                damage_amount: burn_damage,
+                damage_type: DamageType::None,
+                variance: false,
+            });
+            self.ecs
+                .get_mut::<CombatComponent>(entity)
+                .unwrap()
+                .burn_debuff
+                .1 -= 1;
+        }
+
         let mut entity_combat = self.ecs.get_mut::<CombatComponent>(entity).unwrap();
-        entity_combat.burn_debuff.1 = entity_combat.burn_debuff.1.saturating_sub(1);
 
         // Tick buff timers
         entity_combat.strength_buff.1 = entity_combat.strength_buff.1.saturating_sub(1);

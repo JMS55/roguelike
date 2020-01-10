@@ -163,3 +163,8 @@ pub trait AI: Send + Sync + 'static {
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct StaircaseComponent {}
+
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub struct MimicComponent {
+    pub disguised: bool,
+}

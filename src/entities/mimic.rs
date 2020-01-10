@@ -9,22 +9,30 @@ pub fn create_mimic(position: PositionComponent, game: &mut Game) -> Entity {
     game.ecs.spawn((
         NameComponent {
             name: |this_entity, game| {
-                let this_combat = *game.ecs.get::<CombatComponent>(this_entity).unwrap();
-                if this_combat.current_health != this_combat.max_health {
-                    "Mimic"
-                } else {
+                if game
+                    .ecs
+                    .get::<MimicComponent>(this_entity)
+                    .unwrap()
+                    .disguised
+                {
                     "Staircase"
+                } else {
+                    "Mimic"
                 }
             },
         },
         position,
         SpriteComponent {
             id: |this_entity, game| {
-                let this_combat = *game.ecs.get::<CombatComponent>(this_entity).unwrap();
-                if this_combat.current_health != this_combat.max_health {
-                    "mimic"
-                } else {
+                if game
+                    .ecs
+                    .get::<MimicComponent>(this_entity)
+                    .unwrap()
+                    .disguised
+                {
                     "mimic_disguised"
+                } else {
+                    "mimic"
                 }
             },
         },
@@ -39,18 +47,23 @@ pub fn create_mimic(position: PositionComponent, game: &mut Game) -> Entity {
             game.rng.gen_range(4, 13),
             Team::Enemy,
         ),
+        MimicComponent { disguised: true },
     ))
 }
 
 #[derive(Clone)]
-struct MimicAI {
-    chase_target: Option<Entity>,
+pub struct MimicAI {
+    pub chase_target: Option<Entity>,
 }
 
 impl AI for MimicAI {
     fn run(&mut self, this_entity: Entity, game: &mut Game) {
         let this_position = *game.ecs.get::<PositionComponent>(this_entity).unwrap();
-        let this_combat = *game.ecs.get::<CombatComponent>(this_entity).unwrap();
+        let disguised = game
+            .ecs
+            .get::<MimicComponent>(this_entity)
+            .unwrap()
+            .disguised;
 
         // Ensure chase_target is valid
         if let Some(chase_target) = self.chase_target {
@@ -58,7 +71,7 @@ impl AI for MimicAI {
                 self.chase_target = None;
             }
         }
-        if self.chase_target == None && this_combat.current_health != this_combat.max_health {
+        if self.chase_target == None && !disguised {
             self.chase_target = Self::find_chase_target(this_position, game);
         }
 

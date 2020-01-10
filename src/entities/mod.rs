@@ -9,9 +9,11 @@ mod skeleton_scout;
 mod soul_spectre;
 mod volatile_husk;
 
+pub use discordant_soul::create_discordant_soul;
+pub use mimic::MimicAI;
+
 use crate::components::*;
 use crate::game::Game;
-pub use discordant_soul::create_discordant_soul;
 use hecs::{Entity, World};
 use rand::seq::SliceRandom;
 use rand::Rng;
