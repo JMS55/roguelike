@@ -1,5 +1,5 @@
 use crate::components::*;
-use crate::game::{DamageType, Game};
+use crate::game::{DamageInfo, DamageType, Game};
 use hecs::Entity;
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -9,10 +9,12 @@ use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 pub fn create_pyro_snake(position: PositionComponent, game: &mut Game) -> Entity {
     game.ecs.spawn((
         NameComponent {
-            name: |_, _| "Pyro Snake".to_owned(),
+            name: |_, _| "Pyro Snake",
         },
         position,
-        SpriteComponent { id: "pyro_snake" },
+        SpriteComponent {
+            id: |_, _| "pyro_snake",
+        },
         AIComponent {
             ai: Box::new(PyroSnakeAI {
                 chase_target: None,
@@ -234,7 +236,12 @@ impl PyroSnakeAI {
         }
 
         if let Some(target) = target {
-            game.damage_entity(target, this_combat.get_strength(), DamageType::Strength);
+            game.damage_entity(DamageInfo {
+                target,
+                damage_amount: this_combat.get_strength(),
+                damage_type: DamageType::Strength,
+                variance: true,
+            });
             Some(target)
         } else {
             None

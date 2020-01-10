@@ -1,6 +1,6 @@
 use crate::components::*;
 use crate::entities;
-use crate::game::{DamageType, Game};
+use crate::game::{DamageInfo, DamageType, Game};
 use hecs::Entity;
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -10,11 +10,11 @@ use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 pub fn create_danger_spider(position: PositionComponent, game: &mut Game) -> Entity {
     game.ecs.spawn((
         NameComponent {
-            name: |_, _| "Danger Spider".to_owned(),
+            name: |_, _| "Danger Spider",
         },
         position,
         SpriteComponent {
-            id: "danger_spider",
+            id: |_, _| "danger_spider",
         },
         AIComponent {
             ai: Box::new(DangerSpiderAI {
@@ -251,7 +251,12 @@ impl DangerSpiderAI {
         }
 
         if let Some(target) = target {
-            game.damage_entity(target, this_combat.get_focus(), DamageType::Focus);
+            game.damage_entity(DamageInfo {
+                target,
+                damage_amount: this_combat.get_focus(),
+                damage_type: DamageType::Focus,
+                variance: true,
+            });
             true
         } else {
             false

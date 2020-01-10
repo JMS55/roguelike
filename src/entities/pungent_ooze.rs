@@ -1,5 +1,5 @@
 use crate::components::*;
-use crate::game::{DamageType, Game};
+use crate::game::{DamageInfo, DamageType, Game};
 use hecs::Entity;
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -9,10 +9,12 @@ use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 pub fn create_pungent_ooze(position: PositionComponent, game: &mut Game) -> Entity {
     game.ecs.spawn((
         NameComponent {
-            name: |_, _| "Pungent Ooze".to_owned(),
+            name: |_, _| "Pungent Ooze",
         },
         position,
-        SpriteComponent { id: "pungent_ooze" },
+        SpriteComponent {
+            id: |_, _| "pungent_ooze",
+        },
         AIComponent {
             ai: Box::new(PungentOozeAI {
                 chase_target: None,
@@ -230,7 +232,12 @@ impl PungentOozeAI {
         }
 
         if let Some(target) = target {
-            game.damage_entity(target, this_combat.get_agility(), DamageType::Agility);
+            game.damage_entity(DamageInfo {
+                target,
+                damage_amount: this_combat.get_agility(),
+                damage_type: DamageType::Agility,
+                variance: true,
+            });
             Some(target)
         } else {
             None

@@ -313,12 +313,13 @@ impl Game {
 
         // Render entities
         {
-            for (sprite, position) in self
+            for (entity, sprite, position) in self
                 .ecs
                 .query::<(&SpriteComponent, &PositionComponent)>()
                 .iter()
-                .map(|(_, (sprite, position))| {
+                .map(|(entity, (sprite, position))| {
                     (
+                        entity,
                         sprite,
                         PositionComponent {
                             x: position.x - player_position.x + 7,
@@ -326,14 +327,16 @@ impl Game {
                         },
                     )
                 })
-                .filter(|(_, position)| (0..15).contains(&position.x))
-                .filter(|(_, position)| (0..15).contains(&position.y))
+                .filter(|(_, _, position)| (0..15).contains(&position.x))
+                .filter(|(_, _, position)| (0..15).contains(&position.y))
             {
                 let dest_rect =
                     Rect::new((position.x * 32) as i32, (position.y * 32) as i32, 32, 32);
                 canvas
                     .copy(
-                        &textures.get(sprite.id).unwrap_or(&textures["placeholder"]),
+                        &textures
+                            .get((sprite.id)(entity, self))
+                            .unwrap_or(&textures["placeholder"]),
                         None,
                         dest_rect,
                     )
@@ -375,38 +378,62 @@ impl Game {
         }
     }
 
-    pub fn damage_entity(&mut self, entity: Entity, damage_amount: u32, damage_type: DamageType) {
-        let mut entity_combat = self.ecs.get_mut::<CombatComponent>(entity).unwrap();
-        if self
-            .rng
-            .gen_bool(1.0 - entity_combat.get_luck() as f64 / 100.0)
-        {
-            let damage_negated = match damage_type {
+    pub fn damage_entity(&mut self, damage_info: DamageInfo) {
+        let mut target_combat = self
+            .ecs
+            .get_mut::<CombatComponent>(damage_info.target)
+            .unwrap();
+        let mut attack_hit = true;
+        let mut critical_hit = false;
+        if damage_info.variance {
+            critical_hit = self
+                .rng
+                .gen_bool(1.0 - target_combat.get_luck() as f64 / 200.0);
+            if !critical_hit {
+                attack_hit = self
+                    .rng
+                    .gen_bool(1.0 - target_combat.get_luck() as f64 / 100.0);
+            }
+        }
+
+        if attack_hit {
+            // Deal damage
+            let damage_negated = match damage_info.damage_type {
                 DamageType::None => 0,
-                DamageType::Strength => (entity_combat.get_strength() as f64 / 2.0).round() as u32,
+                DamageType::Strength => (target_combat.get_strength() as f64 / 2.0).round() as u32,
                 DamageType::Focus => {
-                    if entity_combat.magic_immune_buff {
-                        damage_amount
+                    if target_combat.magic_immune_buff {
+                        damage_info.damage_amount
                     } else {
-                        (entity_combat.get_focus() as f64 / 2.0).round() as u32
+                        (target_combat.get_focus() as f64 / 2.0).round() as u32
                     }
                 }
-                DamageType::Agility => (entity_combat.get_agility() as f64 / 2.0).round() as u32,
+                DamageType::Agility => (target_combat.get_agility() as f64 / 2.0).round() as u32,
             };
-            let damage = damage_amount.saturating_sub(damage_negated);
-            entity_combat.current_health = entity_combat.current_health.saturating_sub(damage);
+            let mut damage = damage_info.damage_amount.saturating_sub(damage_negated);
+            if damage_info.variance {
+                if critical_hit {
+                    damage = (damage as f64 * 1.5).round() as u32;
+                } else {
+                    damage = self.rng.gen_range(damage, damage + 5);
+                }
+            }
+            target_combat.current_health = target_combat.current_health.saturating_sub(damage);
 
-            if entity_combat.current_health == 0 {
-                let (explosion_damage, explosion_radius) = entity_combat.explode_on_death_buff;
-                drop(entity_combat);
+            if target_combat.current_health == 0 {
+                let (explosion_damage, explosion_radius) = target_combat.explode_on_death_buff;
+                drop(target_combat);
 
-                if entity != self.player_entity {
-                    self.ecs.despawn(entity).unwrap();
+                if damage_info.target != self.player_entity {
+                    self.ecs.despawn(damage_info.target).unwrap();
                 }
 
                 // Handle explode on death buff
                 if explosion_radius != 0 {
-                    let explosion_center = *self.ecs.get::<PositionComponent>(entity).unwrap();
+                    let explosion_center = *self
+                        .ecs
+                        .get::<PositionComponent>(damage_info.target)
+                        .unwrap();
                     let entities_hit_by_explosion = self
                         .ecs
                         .query::<&PositionComponent>()
@@ -425,8 +452,13 @@ impl Game {
                             }
                         })
                         .collect::<Vec<Entity>>();
-                    for entity in entities_hit_by_explosion {
-                        self.damage_entity(entity, explosion_damage, DamageType::None);
+                    for target in entities_hit_by_explosion {
+                        self.damage_entity(DamageInfo {
+                            target,
+                            damage_amount: explosion_damage,
+                            damage_type: DamageType::None,
+                            variance: false,
+                        });
                     }
                 }
             }
@@ -664,7 +696,12 @@ impl Game {
         // Apply burn debuff damage
         let burn_damage = entity_combat.burn_debuff.0;
         drop(entity_combat);
-        self.damage_entity(entity, burn_damage, DamageType::None);
+        self.damage_entity(DamageInfo {
+            target: entity,
+            damage_amount: burn_damage,
+            damage_type: DamageType::None,
+            variance: false,
+        });
         let mut entity_combat = self.ecs.get_mut::<CombatComponent>(entity).unwrap();
         entity_combat.burn_debuff.1 = entity_combat.burn_debuff.1.saturating_sub(1);
 
@@ -710,10 +747,19 @@ impl Game {
     }
 }
 
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct Room {
     pub center: PositionComponent,
     pub x_radius: u32,
     pub y_radius: u32,
+}
+
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub struct DamageInfo {
+    pub target: Entity,
+    pub damage_amount: u32,
+    pub damage_type: DamageType,
+    pub variance: bool,
 }
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]

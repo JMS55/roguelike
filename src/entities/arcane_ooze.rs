@@ -1,5 +1,5 @@
 use crate::components::*;
-use crate::game::{DamageType, Game};
+use crate::game::{DamageInfo, DamageType, Game};
 use hecs::Entity;
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -18,10 +18,12 @@ pub fn create_arcane_ooze(position: PositionComponent, game: &mut Game) -> Entit
     combat.magic_immune_buff = true;
     game.ecs.spawn((
         NameComponent {
-            name: |_, _| "Arcane Ooze".to_owned(),
+            name: |_, _| "Arcane Ooze",
         },
         position,
-        SpriteComponent { id: "arcane_ooze" },
+        SpriteComponent {
+            id: |_, _| "arcane_ooze",
+        },
         AIComponent {
             ai: Box::new(ArcaneOozeAI {
                 chase_target: None,
@@ -234,7 +236,12 @@ impl ArcaneOozeAI {
         }
 
         if let Some(target) = target {
-            game.damage_entity(target, this_combat.get_focus(), DamageType::Focus);
+            game.damage_entity(DamageInfo {
+                target,
+                damage_amount: this_combat.get_focus(),
+                damage_type: DamageType::Focus,
+                variance: true,
+            });
             Some(target)
         } else {
             None

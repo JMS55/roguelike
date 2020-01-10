@@ -4,7 +4,7 @@ use std::ops::Add;
 
 #[derive(Copy, Clone)]
 pub struct NameComponent {
-    pub name: fn(Entity, &Game) -> String,
+    pub name: fn(Entity, &Game) -> &'static str,
 }
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
@@ -38,9 +38,9 @@ impl Add for PositionComponent {
     }
 }
 
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[derive(Copy, Clone)]
 pub struct SpriteComponent {
-    pub id: &'static str,
+    pub id: fn(Entity, &Game) -> &'static str,
 }
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]

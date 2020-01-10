@@ -1,5 +1,5 @@
 use crate::components::*;
-use crate::game::{DamageType, Game};
+use crate::game::{DamageInfo, DamageType, Game};
 use hecs::Entity;
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -9,11 +9,11 @@ use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 pub fn create_skeleton_scout(position: PositionComponent, game: &mut Game) -> Entity {
     game.ecs.spawn((
         NameComponent {
-            name: |_, _| "Skeleton Scout".to_owned(),
+            name: |_, _| "Skeleton Scout",
         },
         position,
         SpriteComponent {
-            id: "skeleton_scout",
+            id: |_, _| "skeleton_scout",
         },
         AIComponent {
             ai: Box::new(SkeletonScoutAI {
@@ -269,7 +269,12 @@ impl SkeletonScoutAI {
         }
 
         if let Some(target) = target {
-            game.damage_entity(target, this_combat.get_strength(), DamageType::Strength);
+            game.damage_entity(DamageInfo {
+                target,
+                damage_amount: this_combat.get_strength(),
+                damage_type: DamageType::Strength,
+                variance: true,
+            });
             true
         } else {
             false

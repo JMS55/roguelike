@@ -1,5 +1,5 @@
 use crate::components::*;
-use crate::game::{DamageType, Game};
+use crate::game::{DamageInfo, DamageType, Game};
 use hecs::Entity;
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -18,11 +18,11 @@ pub fn create_volatile_husk(position: PositionComponent, game: &mut Game) -> Ent
     combat.explode_on_death_buff = (6, 3);
     game.ecs.spawn((
         NameComponent {
-            name: |_, _| "Volatile Husk".to_owned(),
+            name: |_, _| "Volatile Husk",
         },
         position,
         SpriteComponent {
-            id: "volatile_husk",
+            id: |_, _| "volatile_husk",
         },
         AIComponent {
             ai: Box::new(VolatileHuskAI {
@@ -224,7 +224,12 @@ impl VolatileHuskAI {
         }
 
         if let Some(target) = target {
-            game.damage_entity(target, this_combat.get_strength(), DamageType::Strength);
+            game.damage_entity(DamageInfo {
+                target,
+                damage_amount: this_combat.get_strength(),
+                damage_type: DamageType::Strength,
+                variance: true,
+            });
             true
         } else {
             false

@@ -1,5 +1,5 @@
 use crate::components::*;
-use crate::game::{DamageType, Game};
+use crate::game::{DamageInfo, DamageType, Game};
 use hecs::Entity;
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -9,11 +9,11 @@ use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 pub fn create_discordant_soul(position: PositionComponent, game: &mut Game) -> Entity {
     game.ecs.spawn((
         NameComponent {
-            name: |_, _| "Discordant Soul".to_owned(),
+            name: |_, _| "Discordant Soul",
         },
         position,
         SpriteComponent {
-            id: "discordant_soul",
+            id: |_, _| "discordant_soul",
         },
         AIComponent {
             ai: Box::new(DiscordantSoulAI {
@@ -222,7 +222,12 @@ impl DiscordantSoulAI {
         }
 
         if let Some(target) = target {
-            game.damage_entity(target, this_combat.get_agility(), DamageType::Agility);
+            game.damage_entity(DamageInfo {
+                target,
+                damage_amount: this_combat.get_agility(),
+                damage_type: DamageType::Agility,
+                variance: true,
+            });
             true
         } else {
             false

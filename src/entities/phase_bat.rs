@@ -1,5 +1,5 @@
 use crate::components::*;
-use crate::game::{DamageType, Game};
+use crate::game::{DamageInfo, DamageType, Game};
 use hecs::Entity;
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -9,10 +9,12 @@ use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 pub fn create_phase_bat(position: PositionComponent, game: &mut Game) -> Entity {
     game.ecs.spawn((
         NameComponent {
-            name: |_, _| "Phase Bat".to_owned(),
+            name: |_, _| "Phase Bat",
         },
         position,
-        SpriteComponent { id: "phase_bat" },
+        SpriteComponent {
+            id: |_, _| "phase_bat",
+        },
         AIComponent {
             ai: Box::new(PhaseBatAI {
                 chase_target: None,
@@ -226,7 +228,12 @@ impl PhaseBatAI {
         }
 
         if let Some(target) = target {
-            game.damage_entity(target, this_combat.get_agility(), DamageType::Agility);
+            game.damage_entity(DamageInfo {
+                target,
+                damage_amount: this_combat.get_agility(),
+                damage_type: DamageType::Agility,
+                variance: true,
+            });
             true
         } else {
             false
