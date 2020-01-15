@@ -229,12 +229,12 @@ impl DangerSpiderAI {
 
         let mut target = None;
         for offset in &[
-            PositionComponent { x: -1, y: 0 },
-            PositionComponent { x: 0, y: -1 },
-            PositionComponent { x: 1, y: 0 },
             PositionComponent { x: 0, y: 1 },
+            PositionComponent { x: 1, y: 0 },
+            PositionComponent { x: 0, y: -1 },
+            PositionComponent { x: -1, y: 0 },
         ] {
-            target = game
+            let new_target = game
                 .ecs
                 .query::<(&PositionComponent, &CombatComponent)>()
                 .iter()
@@ -245,8 +245,12 @@ impl DangerSpiderAI {
                         None
                     }
                 });
-            if chase_target.is_some() && target == chase_target {
+            if chase_target.is_some() && new_target == chase_target {
+                target = new_target;
                 break;
+            }
+            if target == None {
+                target = new_target;
             }
         }
 

@@ -5,34 +5,34 @@ use noise::{NoiseFn, OpenSimplex};
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
 use sdl2::keyboard::{KeyboardState, Scancode};
-use sdl2::pixels::PixelFormatEnum;
+use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::rect::Rect;
 use sdl2::render::{Texture, TextureCreator, WindowCanvas};
-use sdl2::ttf::Sdl2TtfContext;
+use sdl2::ttf::Font;
 use sdl2::video::WindowContext;
 use std::collections::hash_map::DefaultHasher;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::{Hash, Hasher};
 use std::time::{Duration, Instant};
 
 pub struct Game {
     pub ecs: World,
-    pub actor_queue: Vec<Entity>,
+    actor_queue: VecDeque<Entity>,
 
     pub player_entity: Entity,
-    pub player_inventory: [Option<Entity>; 16],
     pub player_facing_direction: PositionComponent,
-    pub player_turns_until_passive_healing: u32,
+    player_inventory: [Option<Entity>; 16],
+    player_turns_until_passive_healing: u32,
+    last_input_time: Instant,
 
     pub rooms: Vec<Room>,
-    pub floor_positions: HashSet<PositionComponent>,
-    pub floor_number: u32,
+    floor_positions: HashSet<PositionComponent>,
+    floor_number: u32,
 
     pub rng: Pcg64,
     dungeon_generation_rng: Pcg64,
 
-    last_input_time: Instant,
-
+    pub animation_queue: VecDeque<Box<dyn Animation>>,
     noise_generator: OpenSimplex,
     time_game_started: Instant,
 }
@@ -53,12 +53,13 @@ impl Game {
 
         let mut game = Self {
             ecs,
-            actor_queue: Vec::new(),
+            actor_queue: VecDeque::new(),
 
             player_entity,
-            player_inventory: [None; 16],
             player_facing_direction: PositionComponent { x: 0, y: 1 },
+            player_inventory: [None; 16],
             player_turns_until_passive_healing: 10,
+            last_input_time: Instant::now(),
 
             rooms: Vec::new(),
             floor_positions: HashSet::new(),
@@ -67,8 +68,7 @@ impl Game {
             rng,
             dungeon_generation_rng: Pcg64::seed_from_u64(dungeon_generation_seed),
 
-            last_input_time: Instant::now(),
-
+            animation_queue: VecDeque::new(),
             noise_generator: OpenSimplex::new(),
             time_game_started: Instant::now(),
         };
@@ -84,6 +84,7 @@ impl Game {
             .unwrap()
             .current_health
             != 0
+            && self.animation_queue.is_empty()
         {
             // If actor queue is empty, add player and then all AI entities
             if self.actor_queue.is_empty() {
@@ -94,11 +95,11 @@ impl Game {
                         .iter()
                         .map(|(entity, _)| entity),
                 );
-                self.actor_queue.push(self.player_entity);
+                self.actor_queue.push_back(self.player_entity);
             }
 
             // Run next actor
-            let entity = *self.actor_queue.get(self.actor_queue.len() - 1).unwrap();
+            let entity = *self.actor_queue.front().unwrap();
             if entity == self.player_entity {
                 if self.last_input_time.elapsed() >= Duration::from_millis(120) {
                     let mut player_acted = false;
@@ -233,17 +234,6 @@ impl Game {
                                 .get_mut::<MimicComponent>(mimic_entity)
                                 .unwrap()
                                 .disguised = false;
-
-                            // Mimic attacks Player
-                            let mimic_combat =
-                                *self.ecs.get::<CombatComponent>(mimic_entity).unwrap();
-                            self.damage_entity(DamageInfo {
-                                target: self.player_entity,
-                                damage_amount: mimic_combat.get_strength(),
-                                damage_type: DamageType::Strength,
-                                variance: true,
-                            });
-
                             // Mimic starts chasing player
                             self.ecs
                                 .insert_one(
@@ -264,7 +254,7 @@ impl Game {
 
                     if player_acted {
                         self.entity_end_of_turn(entity);
-                        self.actor_queue.pop();
+                        self.actor_queue.pop_front();
                     }
                 }
             } else {
@@ -281,17 +271,17 @@ impl Game {
                     let _ = self.ecs.insert_one(entity, AIComponent { ai });
                     self.entity_end_of_turn(entity);
                 }
-                self.actor_queue.pop();
+                self.actor_queue.pop_front();
             }
         }
     }
 
     pub fn render(
-        &self,
+        &mut self,
         canvas: &mut WindowCanvas,
-        textures: &HashMap<String, Texture>,
+        textures: &mut HashMap<String, Texture>,
         texture_creator: &TextureCreator<WindowContext>,
-        _: &Sdl2TtfContext,
+        font: &Font,
     ) {
         let player_position = *self
             .ecs
@@ -378,6 +368,13 @@ impl Game {
                 })
                 .filter(|(_, _, position)| (0..15).contains(&position.x))
                 .filter(|(_, _, position)| (0..15).contains(&position.y))
+                .filter(|(entity, _, _)| {
+                    if let Some(animation) = self.animation_queue.front() {
+                        !animation.entities_not_to_render().contains(&entity)
+                    } else {
+                        true
+                    }
+                })
             {
                 let dest_rect =
                     Rect::new((position.x * 32) as i32, (position.y * 32) as i32, 32, 32);
@@ -425,6 +422,16 @@ impl Game {
                 )
                 .unwrap();
         }
+
+        // Render animation
+        {
+            if let Some(animation) = self.animation_queue.front_mut() {
+                animation.render(canvas, textures, texture_creator, font);
+                if animation.is_complete() {
+                    self.animation_queue.pop_front();
+                }
+            }
+        }
     }
 
     pub fn damage_entity(&mut self, damage_info: DamageInfo) {
@@ -435,9 +442,7 @@ impl Game {
         let mut attack_hit = true;
         let mut critical_hit = false;
         if damage_info.variance {
-            critical_hit = self
-                .rng
-                .gen_bool(1.0 - target_combat.get_luck() as f64 / 200.0);
+            critical_hit = self.rng.gen_bool(target_combat.get_luck() as f64 / 200.0);
             if !critical_hit {
                 attack_hit = self
                     .rng
@@ -469,13 +474,38 @@ impl Game {
             }
             target_combat.current_health = target_combat.current_health.saturating_sub(damage);
 
+            // Add damage animation
+            let player_position = *self
+                .ecs
+                .get::<PositionComponent>(self.player_entity)
+                .unwrap();
+            let target_position = *self
+                .ecs
+                .get::<PositionComponent>(damage_info.target)
+                .unwrap();
+            let render_position = PositionComponent {
+                x: target_position.x - player_position.x + 7,
+                y: player_position.y - target_position.y + 7,
+            };
+            if (0..15).contains(&render_position.x) && (0..15).contains(&render_position.y) {
+                let target_sprite = self.ecs.get::<SpriteComponent>(damage_info.target).unwrap();
+                self.animation_queue.push_back(Box::new(DamageAnimation {
+                    time_started: None,
+                    damaged_entity: damage_info.target,
+                    entity_position: render_position,
+                    entity_sprite: (target_sprite.id)(damage_info.target, self),
+                    damage_dealt: damage,
+                    critical_hit,
+                }));
+            }
+
             // Undisguise Mimic
             if let Ok(mut mimic_component) = self.ecs.get_mut::<MimicComponent>(damage_info.target)
             {
                 mimic_component.disguised = false;
             }
 
-            // On Death
+            // On death
             if target_combat.current_health == 0 {
                 let (explosion_damage, explosion_radius) = target_combat.explode_on_death_buff;
                 drop(target_combat);
@@ -519,6 +549,26 @@ impl Game {
                     }
                 }
             }
+        } else {
+            // Add miss animation
+            let player_position = *self
+                .ecs
+                .get::<PositionComponent>(self.player_entity)
+                .unwrap();
+            let target_position = *self
+                .ecs
+                .get::<PositionComponent>(damage_info.target)
+                .unwrap();
+            let render_position = PositionComponent {
+                x: target_position.x - player_position.x + 7,
+                y: player_position.y - target_position.y + 7,
+            };
+            if (0..15).contains(&render_position.x) && (0..15).contains(&render_position.y) {
+                self.animation_queue.push_back(Box::new(MissAnimation {
+                    time_started: None,
+                    entity_position: render_position,
+                }));
+            }
         }
     }
 
@@ -545,7 +595,6 @@ impl Game {
         }
         self.rooms.clear();
         self.floor_positions.clear();
-        self.floor_number += 1;
 
         // Place rooms
         let starting_room = Room {
@@ -699,6 +748,12 @@ impl Game {
             &mut self.ecs,
         );
 
+        self.floor_number += 1;
+        self.animation_queue.push_back(Box::new(NextFloorAnimation {
+            time_started: None,
+            floor_number: self.floor_number,
+        }));
+
         self.spawn_enemies();
     }
 
@@ -812,13 +867,6 @@ impl Game {
 }
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub struct Room {
-    pub center: PositionComponent,
-    pub x_radius: u32,
-    pub y_radius: u32,
-}
-
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct DamageInfo {
     pub target: Entity,
     pub damage_amount: u32,
@@ -832,4 +880,255 @@ pub enum DamageType {
     Strength,
     Focus,
     Agility,
+}
+
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub struct Room {
+    pub center: PositionComponent,
+    pub x_radius: u32,
+    pub y_radius: u32,
+}
+
+pub trait Animation {
+    fn render(
+        &mut self,
+        canvas: &mut WindowCanvas,
+        textures: &mut HashMap<String, Texture>,
+        texture_creator: &TextureCreator<WindowContext>,
+        font: &Font,
+    );
+    fn entities_not_to_render(&self) -> HashSet<Entity>;
+    fn is_complete(&self) -> bool;
+}
+
+struct DamageAnimation {
+    time_started: Option<Instant>,
+    damaged_entity: Entity,
+    entity_position: PositionComponent,
+    entity_sprite: &'static str,
+    damage_dealt: u32,
+    critical_hit: bool,
+}
+
+impl Animation for DamageAnimation {
+    fn render(
+        &mut self,
+        canvas: &mut WindowCanvas,
+        textures: &mut HashMap<String, Texture>,
+        texture_creator: &TextureCreator<WindowContext>,
+        font: &Font,
+    ) {
+        if self.time_started == None {
+            self.time_started = Some(Instant::now());
+        }
+
+        let frame_number =
+            ((self.time_started.unwrap().elapsed().as_millis().min(400) as f64 / 400.0) * 4.0)
+                .floor() as i32;
+        let opacity = if frame_number % 2 == 0 { 127 } else { 255 };
+        textures
+            .entry(self.entity_sprite.to_owned())
+            .and_modify(|texture| texture.set_alpha_mod(opacity));
+        canvas
+            .copy(
+                &textures[self.entity_sprite],
+                None,
+                Rect::new(
+                    self.entity_position.x * 32,
+                    self.entity_position.y * 32,
+                    32,
+                    32,
+                ),
+            )
+            .unwrap();
+        textures
+            .entry(self.entity_sprite.to_owned())
+            .and_modify(|texture| texture.set_alpha_mod(255));
+
+        if self.critical_hit {
+            let frame_number =
+                ((self.time_started.unwrap().elapsed().as_millis().min(400) as f64 / 400.0) * 6.0)
+                    .floor() as i32;
+            canvas
+                .copy(
+                    &textures["critical_hit_animation"],
+                    Rect::new(24 * frame_number, 0, 24, 24),
+                    Rect::new(
+                        self.entity_position.x * 32 - 32,
+                        self.entity_position.y * 32 - 32,
+                        96,
+                        96,
+                    ),
+                )
+                .unwrap();
+        }
+
+        let surface = font
+            .render(&format!("-{}hp", self.damage_dealt))
+            .blended(Color::RGBA(0, 0, 0, 255))
+            .unwrap();
+        let texture = texture_creator
+            .create_texture_from_surface(&surface)
+            .unwrap();
+        let texture_info = texture.query();
+        let dest_rect = Rect::new(
+            self.entity_position.x * 32 + (32 - texture_info.width as i32) / 2 + 1,
+            self.entity_position.y * 32 - 20 + 2,
+            texture_info.width,
+            texture_info.height,
+        );
+        canvas.copy(&texture, None, dest_rect).unwrap();
+        let surface = font
+            .render(&format!("-{}hp", self.damage_dealt))
+            .blended(Color::RGBA(255, 255, 255, 255))
+            .unwrap();
+        let texture = texture_creator
+            .create_texture_from_surface(&surface)
+            .unwrap();
+        let texture_info = texture.query();
+        let dest_rect = Rect::new(
+            self.entity_position.x * 32 + (32 - texture_info.width as i32) / 2 - 1,
+            self.entity_position.y * 32 - 20,
+            texture_info.width,
+            texture_info.height,
+        );
+        canvas.copy(&texture, None, dest_rect).unwrap();
+    }
+
+    fn entities_not_to_render(&self) -> HashSet<Entity> {
+        let mut entities_not_to_render = HashSet::with_capacity(1);
+        entities_not_to_render.insert(self.damaged_entity);
+        entities_not_to_render
+    }
+
+    fn is_complete(&self) -> bool {
+        self.time_started.unwrap().elapsed() >= Duration::from_millis(400)
+    }
+}
+
+struct MissAnimation {
+    time_started: Option<Instant>,
+    entity_position: PositionComponent,
+}
+
+impl Animation for MissAnimation {
+    fn render(
+        &mut self,
+        canvas: &mut WindowCanvas,
+        _: &mut HashMap<String, Texture>,
+        texture_creator: &TextureCreator<WindowContext>,
+        font: &Font,
+    ) {
+        if self.time_started == None {
+            self.time_started = Some(Instant::now());
+        }
+
+        let surface = font
+            .render("Dodged!")
+            .blended(Color::RGBA(254, 174, 52, 255))
+            .unwrap();
+        let texture = texture_creator
+            .create_texture_from_surface(&surface)
+            .unwrap();
+        let texture_info = texture.query();
+        let dest_rect = Rect::new(
+            self.entity_position.x * 32 + (32 - texture_info.width as i32) / 2 - 1,
+            self.entity_position.y * 32 - 20,
+            texture_info.width,
+            texture_info.height,
+        );
+        canvas.copy(&texture, None, dest_rect).unwrap();
+        let surface = font
+            .render("Dodged!")
+            .blended(Color::RGBA(140, 123, 39, 255))
+            .unwrap();
+        let texture = texture_creator
+            .create_texture_from_surface(&surface)
+            .unwrap();
+        let texture_info = texture.query();
+        let dest_rect = Rect::new(
+            self.entity_position.x * 32 + (32 - texture_info.width as i32) / 2 + 1,
+            self.entity_position.y * 32 - 20 + 2,
+            texture_info.width,
+            texture_info.height,
+        );
+        canvas.copy(&texture, None, dest_rect).unwrap();
+    }
+
+    fn entities_not_to_render(&self) -> HashSet<Entity> {
+        HashSet::with_capacity(0)
+    }
+
+    fn is_complete(&self) -> bool {
+        self.time_started.unwrap().elapsed() >= Duration::from_millis(400)
+    }
+}
+
+struct NextFloorAnimation {
+    time_started: Option<Instant>,
+    floor_number: u32,
+}
+
+impl Animation for NextFloorAnimation {
+    fn render(
+        &mut self,
+        canvas: &mut WindowCanvas,
+        _: &mut HashMap<String, Texture>,
+        texture_creator: &TextureCreator<WindowContext>,
+        font: &Font,
+    ) {
+        if self.time_started == None {
+            self.time_started = Some(Instant::now());
+        }
+
+        let t = self.time_started.unwrap().elapsed().as_secs_f64().min(1.0);
+        let opacity = if t > 0.4 {
+            (((1.0 - t) * 255.0).round() as u8).max(1)
+        } else {
+            255
+        };
+
+        let surface = font
+            .render(&format!("Floor {}", self.floor_number))
+            .blended(Color::RGBA(0, 0, 0, opacity))
+            .unwrap();
+        let texture = texture_creator
+            .create_texture_from_surface(&surface)
+            .unwrap();
+        let mut texture_info = texture.query();
+        texture_info.width *= 3;
+        texture_info.height *= 3;
+        let dest_rect = Rect::new(
+            (480 - texture_info.width as i32) / 2 + 1,
+            (480 - texture_info.height as i32) / 4 + 2,
+            texture_info.width,
+            texture_info.height,
+        );
+        canvas.copy(&texture, None, dest_rect).unwrap();
+        let surface = font
+            .render(&format!("Floor {}", self.floor_number))
+            .blended(Color::RGBA(255, 255, 255, opacity))
+            .unwrap();
+        let texture = texture_creator
+            .create_texture_from_surface(&surface)
+            .unwrap();
+        let mut texture_info = texture.query();
+        texture_info.width *= 3;
+        texture_info.height *= 3;
+        let dest_rect = Rect::new(
+            (480 - texture_info.width as i32) / 2 - 1,
+            (480 - texture_info.height as i32) / 4,
+            texture_info.width,
+            texture_info.height,
+        );
+        canvas.copy(&texture, None, dest_rect).unwrap();
+    }
+
+    fn entities_not_to_render(&self) -> HashSet<Entity> {
+        HashSet::with_capacity(0)
+    }
+
+    fn is_complete(&self) -> bool {
+        self.time_started.unwrap().elapsed() >= Duration::from_secs(1)
+    }
 }

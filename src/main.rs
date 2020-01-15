@@ -21,7 +21,7 @@ fn main() {
     let window = video_context.window("roguelike", 480, 480).build().unwrap();
     let mut canvas = window.into_canvas().present_vsync().build().unwrap();
     let texture_creator = canvas.texture_creator();
-    let textures = fs::read_dir("assets")
+    let mut textures = fs::read_dir("assets")
         .unwrap()
         .filter_map(|file| {
             let path = file.unwrap().path();
@@ -39,6 +39,7 @@ fn main() {
         })
         .collect::<HashMap<String, Texture>>();
     let ttf_context = sdl2::ttf::init().unwrap();
+    let font = ttf_context.load_font("assets/04B_03__.ttf", 16).unwrap();
 
     let seed = thread_rng()
         .sample_iter(&Alphanumeric)
@@ -66,7 +67,7 @@ fn main() {
 
         // Render
         canvas.clear();
-        game.render(&mut canvas, &textures, &texture_creator, &ttf_context);
+        game.render(&mut canvas, &mut textures, &texture_creator, &font);
         canvas.present();
     }
 }

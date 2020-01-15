@@ -1,9 +1,14 @@
 use crate::components::*;
-use crate::game::{DamageInfo, DamageType, Game};
+use crate::game::{Animation, DamageInfo, DamageType, Game};
 use hecs::Entity;
 use rand::Rng;
+use sdl2::rect::Rect;
+use sdl2::render::{Texture, TextureCreator, WindowCanvas};
+use sdl2::ttf::Font;
+use sdl2::video::WindowContext;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
+use std::time::{Duration, Instant};
 
 pub fn create_mimic(position: PositionComponent, game: &mut Game) -> Entity {
     game.ecs.spawn((
@@ -76,12 +81,12 @@ impl AI for MimicAI {
         }
 
         // Attack, otherwise move
-        let attack_result = Self::try_attack(this_entity, self.chase_target, game);
-        if !game.ecs.contains(this_entity) {
-            return;
-        }
-        if !attack_result {
-            if let Some(chase_target) = self.chase_target {
+        if let Some(chase_target) = self.chase_target {
+            let attack_result = Self::try_attack(this_entity, chase_target, game);
+            if !game.ecs.contains(this_entity) {
+                return;
+            }
+            if !attack_result {
                 let chase_target_position =
                     *game.ecs.get::<PositionComponent>(chase_target).unwrap();
                 Self::move_towards(
@@ -188,18 +193,18 @@ impl MimicAI {
     }
 
     // Returns whether the attack went through or not
-    fn try_attack(this_entity: Entity, chase_target: Option<Entity>, game: &mut Game) -> bool {
+    fn try_attack(this_entity: Entity, chase_target: Entity, game: &mut Game) -> bool {
         let this_position = *game.ecs.get::<PositionComponent>(this_entity).unwrap();
         let this_combat = *game.ecs.get::<CombatComponent>(this_entity).unwrap();
 
         let mut target = None;
         for offset in &[
-            PositionComponent { x: -1, y: 0 },
-            PositionComponent { x: 0, y: -1 },
-            PositionComponent { x: 1, y: 0 },
             PositionComponent { x: 0, y: 1 },
+            PositionComponent { x: 1, y: 0 },
+            PositionComponent { x: 0, y: -1 },
+            PositionComponent { x: -1, y: 0 },
         ] {
-            target = game
+            let new_target = game
                 .ecs
                 .query::<(&PositionComponent, &CombatComponent)>()
                 .iter()
@@ -210,18 +215,40 @@ impl MimicAI {
                         None
                     }
                 });
-            if chase_target.is_some() && target == chase_target {
+            if new_target == Some(chase_target) {
+                target = new_target;
                 break;
+            }
+            if target == None {
+                target = new_target;
             }
         }
 
         if let Some(target) = target {
+            let player_position = *game
+                .ecs
+                .get::<PositionComponent>(game.player_entity)
+                .unwrap();
+            let target_position = *game.ecs.get::<PositionComponent>(target).unwrap();
+            let render_position = PositionComponent {
+                x: target_position.x - player_position.x + 7,
+                y: player_position.y - target_position.y + 7,
+            };
+            if (0..15).contains(&render_position.x) && (0..15).contains(&render_position.y) {
+                game.animation_queue
+                    .push_back(Box::new(MimicAttackAnimation {
+                        time_started: None,
+                        position: render_position,
+                    }));
+            }
+
             game.damage_entity(DamageInfo {
                 target,
                 damage_amount: this_combat.get_strength(),
                 damage_type: DamageType::Strength,
                 variance: true,
             });
+
             true
         } else {
             false
@@ -303,5 +330,43 @@ impl MimicAI {
         } else {
             false
         }
+    }
+}
+
+struct MimicAttackAnimation {
+    time_started: Option<Instant>,
+    position: PositionComponent,
+}
+
+impl Animation for MimicAttackAnimation {
+    fn render(
+        &mut self,
+        canvas: &mut WindowCanvas,
+        textures: &mut HashMap<String, Texture>,
+        _: &TextureCreator<WindowContext>,
+        _: &Font,
+    ) {
+        if self.time_started == None {
+            self.time_started = Some(Instant::now());
+        }
+
+        let frame_number =
+            ((self.time_started.unwrap().elapsed().as_millis().min(600) as f64 / 600.0) * 11.0)
+                .floor() as i32;
+        canvas
+            .copy(
+                &textures["mimic_attack"],
+                Rect::new(8 * frame_number, 0, 8, 8),
+                Rect::new(self.position.x * 32, self.position.y * 32, 32, 32),
+            )
+            .unwrap();
+    }
+
+    fn entities_not_to_render(&self) -> HashSet<Entity> {
+        HashSet::with_capacity(0)
+    }
+
+    fn is_complete(&self) -> bool {
+        self.time_started.unwrap().elapsed() >= Duration::from_millis(600)
     }
 }

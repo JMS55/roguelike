@@ -72,12 +72,12 @@ impl AI for SoulSpectreAI {
         }
 
         // Attack, otherwise move
-        let attack_result = Self::try_attack(this_entity, self.chase_target, game);
-        if !game.ecs.contains(this_entity) {
-            return;
-        }
-        if !attack_result {
-            if let Some(chase_target) = self.chase_target {
+        if let Some(chase_target) = self.chase_target {
+            let attack_result = Self::try_attack(this_entity, chase_target, game);
+            if !game.ecs.contains(this_entity) {
+                return;
+            }
+            if !attack_result {
                 let chase_target_position =
                     *game.ecs.get::<PositionComponent>(chase_target).unwrap();
                 Self::move_towards(
@@ -184,18 +184,18 @@ impl SoulSpectreAI {
     }
 
     // Returns whether the attack went through or not
-    fn try_attack(this_entity: Entity, chase_target: Option<Entity>, game: &mut Game) -> bool {
+    fn try_attack(this_entity: Entity, chase_target: Entity, game: &mut Game) -> bool {
         let this_position = *game.ecs.get::<PositionComponent>(this_entity).unwrap();
         let this_combat = *game.ecs.get::<CombatComponent>(this_entity).unwrap();
 
         let mut target = None;
         for offset in &[
-            PositionComponent { x: -1, y: 0 },
-            PositionComponent { x: 0, y: -1 },
-            PositionComponent { x: 1, y: 0 },
             PositionComponent { x: 0, y: 1 },
+            PositionComponent { x: 1, y: 0 },
+            PositionComponent { x: 0, y: -1 },
+            PositionComponent { x: -1, y: 0 },
         ] {
-            target = game
+            let new_target = game
                 .ecs
                 .query::<(&PositionComponent, &CombatComponent)>()
                 .iter()
@@ -206,8 +206,12 @@ impl SoulSpectreAI {
                         None
                     }
                 });
-            if chase_target.is_some() && target == chase_target {
+            if new_target == Some(chase_target) {
+                target = new_target;
                 break;
+            }
+            if target == None {
+                target = new_target;
             }
         }
 

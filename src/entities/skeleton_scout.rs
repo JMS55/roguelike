@@ -1,10 +1,15 @@
 use crate::components::*;
-use crate::game::{DamageInfo, DamageType, Game};
+use crate::game::{Animation, DamageInfo, DamageType, Game};
 use hecs::Entity;
 use rand::seq::SliceRandom;
 use rand::Rng;
+use sdl2::rect::Rect;
+use sdl2::render::{Texture, TextureCreator, WindowCanvas};
+use sdl2::ttf::Font;
+use sdl2::video::WindowContext;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
+use std::time::{Duration, Instant};
 
 pub fn create_skeleton_scout(position: PositionComponent, game: &mut Game) -> Entity {
     game.ecs.spawn((
@@ -200,12 +205,12 @@ impl SkeletonScoutAI {
 
         let mut target = None;
         for offset in &[
-            PositionComponent { x: -2, y: 0 },
-            PositionComponent { x: 0, y: -2 },
-            PositionComponent { x: 2, y: 0 },
             PositionComponent { x: 0, y: 2 },
+            PositionComponent { x: 2, y: 0 },
+            PositionComponent { x: 0, y: -2 },
+            PositionComponent { x: -2, y: 0 },
         ] {
-            target = game
+            let new_target = game
                 .ecs
                 .query::<(&PositionComponent, &CombatComponent)>()
                 .iter()
@@ -216,8 +221,12 @@ impl SkeletonScoutAI {
                         None
                     }
                 });
-            if chase_target.is_some() && target == chase_target {
+            if chase_target.is_some() && new_target == chase_target {
+                target = new_target;
                 break;
+            }
+            if target == None {
+                target = new_target;
             }
         }
 
@@ -233,12 +242,12 @@ impl SkeletonScoutAI {
             for neighbor in &this_position.neighbors() {
                 if !obstacles.contains(&neighbor) {
                     for offset in &[
-                        PositionComponent { x: -2, y: 0 },
-                        PositionComponent { x: 0, y: -2 },
-                        PositionComponent { x: 2, y: 0 },
                         PositionComponent { x: 0, y: 2 },
+                        PositionComponent { x: 2, y: 0 },
+                        PositionComponent { x: 0, y: -2 },
+                        PositionComponent { x: -2, y: 0 },
                     ] {
-                        target = game
+                        let new_target = game
                             .ecs
                             .query::<(&PositionComponent, &CombatComponent)>()
                             .iter()
@@ -251,13 +260,14 @@ impl SkeletonScoutAI {
                                     None
                                 }
                             });
-                        {
-                            if let Some(target) = target {
-                                new_position = Some(*neighbor);
-                                if Some(target) == chase_target {
-                                    break;
-                                }
-                            }
+                        if chase_target.is_some() && new_target == chase_target {
+                            target = new_target;
+                            new_position = Some(*neighbor);
+                            break;
+                        }
+                        if target == None {
+                            target = new_target;
+                            new_position = Some(*neighbor);
                         }
                     }
                     if let Some(new_position) = new_position {
@@ -269,12 +279,36 @@ impl SkeletonScoutAI {
         }
 
         if let Some(target) = target {
+            let player_position = *game
+                .ecs
+                .get::<PositionComponent>(game.player_entity)
+                .unwrap();
+            let target_position = *game.ecs.get::<PositionComponent>(target).unwrap();
+            let start_render_position = PositionComponent {
+                x: this_position.x - player_position.x + 7,
+                y: player_position.y - this_position.y + 7,
+            };
+            let end_render_position = PositionComponent {
+                x: target_position.x - player_position.x + 7,
+                y: player_position.y - target_position.y + 7,
+            };
+            if (0..15).contains(&end_render_position.x) && (0..15).contains(&end_render_position.y)
+            {
+                game.animation_queue
+                    .push_back(Box::new(SkeletonScoutAttackAnimation {
+                        time_started: None,
+                        start_position: start_render_position,
+                        end_position: end_render_position,
+                    }));
+            }
+
             game.damage_entity(DamageInfo {
                 target,
                 damage_amount: this_combat.get_strength(),
                 damage_type: DamageType::Strength,
                 variance: true,
             });
+
             true
         } else {
             false
@@ -356,5 +390,61 @@ impl SkeletonScoutAI {
         } else {
             false
         }
+    }
+}
+
+struct SkeletonScoutAttackAnimation {
+    time_started: Option<Instant>,
+    start_position: PositionComponent,
+    end_position: PositionComponent,
+}
+
+impl Animation for SkeletonScoutAttackAnimation {
+    fn render(
+        &mut self,
+        canvas: &mut WindowCanvas,
+        textures: &mut HashMap<String, Texture>,
+        _: &TextureCreator<WindowContext>,
+        _: &Font,
+    ) {
+        if self.time_started == None {
+            self.time_started = Some(Instant::now());
+        }
+
+        let x_distance = self.start_position.x - self.end_position.x;
+        let y_distance = self.start_position.y - self.end_position.y;
+        let t = self.time_started.unwrap().elapsed().as_secs_f64().min(0.4) / 0.2;
+        let x_offset = (t * -32.0).round() as i32 * x_distance.signum();
+        let y_offset = (t * -32.0).round() as i32 * y_distance.signum();
+
+        canvas
+            .copy_ex(
+                &textures["skeleton_scout_attack"],
+                None,
+                Rect::new(
+                    self.start_position.x * 32 + x_offset,
+                    self.start_position.y * 32 + y_offset,
+                    32,
+                    32,
+                ),
+                match y_offset.signum() {
+                    1 => 90.0,
+                    -1 => -90.0,
+                    0 => 0.0,
+                    _ => unreachable!(),
+                },
+                None,
+                x_offset.signum() == -1,
+                false,
+            )
+            .unwrap();
+    }
+
+    fn entities_not_to_render(&self) -> HashSet<Entity> {
+        HashSet::with_capacity(0)
+    }
+
+    fn is_complete(&self) -> bool {
+        self.time_started.unwrap().elapsed() >= Duration::from_millis(400)
     }
 }
